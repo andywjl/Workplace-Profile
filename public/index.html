@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>楼宇档案系统 | Building Profile</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="h-full">
+
+<!-- ============================================================
+     TOP BAR: China/Non-China + Role selector
+     ============================================================ -->
+<div id="topBar" class="fixed top-0 left-0 right-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur">
+  <div class="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3">
+    <div class="flex items-center gap-4">
+      <h1 class="text-lg font-semibold tracking-tight text-slate-800">楼宇档案系统</h1>
+      <div class="flex items-center rounded-xl bg-slate-100 p-1 text-sm">
+        <button class="geo-tab active rounded-lg px-4 py-1.5 font-medium transition" data-geo="china">China</button>
+        <button class="geo-tab rounded-lg px-4 py-1.5 font-medium text-slate-400 transition" data-geo="nonchina">Non-China</button>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <label class="text-sm text-slate-500">当前角色</label>
+      <select id="roleSelect" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 shadow-sm">
+        <option value="admin" selected>行政管理层</option>
+        <option value="region_ops">区域运营负责人</option>
+        <option value="building_manager">楼长</option>
+        <option value="center_office">中台专项小组</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     NON-CHINA PLACEHOLDER PAGE
+     ============================================================ -->
+<div id="nonChinaPage" class="hidden pt-20">
+  <div class="mx-auto flex max-w-[1200px] flex-col items-center justify-center px-6 py-32">
+    <div class="mb-6 text-8xl">🌍</div>
+    <h2 class="mb-4 text-3xl font-semibold text-slate-700">Non-China — 敬请期待</h2>
+    <p class="max-w-lg text-center text-slate-500">该模块目前正在规划中，后续将覆盖全球其他国家和地区的楼宇档案管理。敬请关注上线通知。</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     CHINA PAGE (main content)
+     ============================================================ -->
+<div id="chinaPage" class="pt-20">
+<div class="mx-auto max-w-[1440px] px-6 pb-10">
+
+  <!-- Breadcrumb + 3-layer nav -->
+  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+    <div id="breadcrumb" class="flex items-center gap-1.5 text-sm text-slate-500">
+      <span class="crumb" data-view="overview">中国区视角</span>
+      <span class="crumb-sep hidden">›</span>
+      <span class="crumb hidden font-medium text-slate-700" data-view="region">区域下钻</span>
+      <span class="crumb-sep-2 hidden">›</span>
+      <span class="crumb-2 hidden font-medium text-slate-700" data-view="building">单楼宇</span>
+    </div>
+    <div class="drill-tab-nav">
+      <button class="ops-drill-tab tab-active" data-view="overview">1. 全国总览</button>
+      <button class="ops-drill-tab" data-view="region">2. 区域下钻</button>
+      <button class="ops-drill-tab" data-view="building">3. 单楼宇下钻</button>
+    </div>
+  </div>
+
+  <!-- Global Filters -->
+  <div id="globalFilters" class="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2.5 shadow-softer backdrop-blur">
+    <label class="text-sm text-slate-500">筛选</label>
+    <select id="filterRegion" class="rounded-lg border-slate-200 bg-white text-sm px-2 py-1">
+      <option value="">全部区域</option>
+      <option value="京区">京区</option><option value="北区">北区</option>
+      <option value="东区">东区</option><option value="西区">西区</option><option value="南区">南区</option>
+    </select>
+    <select id="filterAsset" class="rounded-lg border-slate-200 bg-white text-sm px-2 py-1">
+      <option value="">全部性质</option>
+      <option value="自持园区">自持园区</option><option value="租赁职场">租赁职场</option>
+    </select>
+    <select id="filterPeriod" class="rounded-lg border-slate-200 bg-white text-sm px-2 py-1">
+      <option value="H1_2026">H1 2026</option>
+      <option value="H2_2025">H2 2025</option>
+    </select>
+    <span class="text-xs text-slate-400" id="dataInfo"></span>
+  </div>
+
+  <!-- ============================================================
+       VIEW 1: 全国总览
+       ============================================================ -->
+  <div id="viewOverview" class="view-panel mt-5">
+
+    <!-- KPI Cards -->
+    <div id="kpiCards" class="grid grid-cols-5 gap-4"></div>
+
+    <!-- Key-4 Dimensions: 环境安全 / 温度适宜 / 照明亮堂 / 空气清新 -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <div class="flex items-center gap-2 mb-4">
+        <h3 class="text-sm font-semibold text-slate-700">四大核心维度</h3>
+        <span class="text-xs text-slate-400">环境安全 · 温度适宜 · 照明亮堂 · 空气清新</span>
+      </div>
+      <div id="key4KpiCards" class="grid grid-cols-4 gap-4 mb-5"></div>
+      <div id="chartKey4Region" style="height:320px"></div>
+    </div>
+
+    <!-- Trend Comparison: H1 2026 vs H2 2025 -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-slate-700">H1 2026 vs H2 2025 维度趋势对比</h3>
+        <span class="text-xs text-slate-400" id="trendSummary"></span>
+      </div>
+      <div id="chartTrendCompare" style="height:480px"></div>
+    </div>
+
+    <!-- Dimension × Region Heatmap -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <h3 class="mb-3 text-sm font-semibold text-slate-700">维度 × 区域 达标热力图 <span class="text-xs text-slate-400 font-normal">点击单元格下钻</span></h3>
+      <div id="chartDimRegionHeatmap" style="height:480px"></div>
+    </div>
+
+    <!-- Charts row: 18-dimension bar + Self-owned vs Leased -->
+    <div class="mt-5 grid grid-cols-2 gap-5">
+      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+        <h3 class="mb-3 text-sm font-semibold text-slate-700">18 维度达标率</h3>
+        <div id="chartDimBar" style="height:420px"></div>
+      </div>
+      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+        <h3 class="mb-3 text-sm font-semibold text-slate-700">自持园区 vs 租赁职场 维度对比</h3>
+        <div id="chartAssetCompare" style="height:420px"></div>
+      </div>
+    </div>
+
+    <!-- Region Summary -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <h3 class="mb-3 text-sm font-semibold text-slate-700">区域概览</h3>
+      <div id="regionSummaryCards" class="grid grid-cols-5 gap-4"></div>
+    </div>
+
+    <!-- Measures Summary Table -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <h3 class="mb-3 text-sm font-semibold text-slate-700">改进措施汇总</h3>
+      <div id="measuresTableOverview" class="overflow-x-auto"></div>
+    </div>
+
+    <!-- Building List -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <h3 class="mb-3 text-sm font-semibold text-slate-700">楼宇列表</h3>
+      <div id="buildingTableOverview" class="overflow-x-auto"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       VIEW 2: 区域下钻
+       ============================================================ -->
+  <div id="viewRegion" class="view-panel mt-5 hidden">
+
+    <!-- Region Tag Tabs -->
+    <div id="regionTabs" class="mb-4 flex flex-wrap gap-2"></div>
+
+    <!-- Regional KPI Cards -->
+    <div id="regionKpiCards" class="grid grid-cols-5 gap-4"></div>
+
+    <!-- Regional Dimension Chart -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <h3 class="mb-3 text-sm font-semibold text-slate-700" id="regionChartTitle">区域维度达标率</h3>
+      <div id="chartRegionDim" style="height:420px"></div>
+    </div>
+
+    <!-- Regional Asset Compare Chart -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <h3 class="mb-3 text-sm font-semibold text-slate-700">自持园区 vs 租赁职场 维度对比</h3>
+      <div id="chartRegionAssetCompare" style="height:420px"></div>
+    </div>
+
+    <!-- Regional Building Ranking -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <h3 class="mb-3 text-sm font-semibold text-slate-700">区域内楼宇排行</h3>
+      <div id="regionBuildingTable" class="overflow-x-auto"></div>
+    </div>
+
+    <!-- Regional Measures Summary -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <h3 class="mb-3 text-sm font-semibold text-slate-700">区域改进措施</h3>
+      <div id="regionMeasuresTable" class="overflow-x-auto"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       VIEW 3: 单楼宇下钻
+       ============================================================ -->
+  <div id="viewBuilding" class="view-panel mt-5 hidden">
+
+    <!-- Building Selector + Back -->
+    <div class="mb-4 flex items-center gap-4">
+      <button id="btnBackFromBuilding" class="text-sm text-slate-500 hover:text-slate-700 transition">&larr; 返回</button>
+      <select id="buildingSelect" class="rounded-xl border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm min-w-[250px]"></select>
+      <span class="text-xs text-slate-400" id="buildingBreadcrumb"></span>
+    </div>
+
+    <!-- Building Info Card -->
+    <div id="buildingInfoCard" class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur"></div>
+
+    <!-- Radar Chart + AI Portrait -->
+    <div class="mt-5 grid grid-cols-3 gap-5">
+      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+        <h3 class="mb-3 text-sm font-semibold text-slate-700">智能画像分析</h3>
+        <div id="portraitContent">
+          <div class="flex flex-col items-center justify-center py-8 text-slate-400">
+            <p class="text-sm">请选择楼宇后查看</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-span-2 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+        <h3 class="mb-3 text-sm font-semibold text-slate-700">全维度雷达图 <span class="text-xs text-slate-400 font-normal">(H2 2025 vs H1 2026)</span></h3>
+        <div id="chartRadar" style="height:380px"></div>
+      </div>
+    </div>
+
+    <!-- Dimension Detail Tabs -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <h3 class="text-sm font-semibold text-slate-700">维度详情</h3>
+          <select id="indicatorPeriodSwitcher" class="rounded-lg border-slate-200 bg-white text-xs px-2 py-1 text-slate-600">
+            <option value="H1_2026">H1 2026</option>
+            <option value="H2_2025">H2 2025</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="indicatorSaveStatus" class="text-xs text-slate-400 hidden"></span>
+          <button id="btnSaveIndicators" class="rounded-xl bg-indigo-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-indigo-600 transition">保存</button>
+        </div>
+      </div>
+      <div id="dimensionTabs" class="mb-4 flex flex-wrap gap-1.5"></div>
+      <div id="dimensionDetail" class="overflow-x-auto"></div>
+    </div>
+
+    <!-- Measures Tab Section -->
+    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+      <h3 class="mb-3 text-sm font-semibold text-slate-700">改进方案</h3>
+      <div id="buildingMeasures" class="overflow-x-auto">
+        <p class="text-sm text-slate-400 py-4 text-center">暂无改进措施数据</p>
+      </div>
+    </div>
+
+    <!-- Asset / Energy / Cost Modules -->
+    <div class="mt-5 grid grid-cols-3 gap-5">
+      <div id="assetModule" class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+        <h3 class="mb-3 text-sm font-semibold text-slate-700">资产管理</h3>
+        <div id="assetModuleContent"></div>
+      </div>
+      <div id="energyModule" class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+        <h3 class="mb-3 text-sm font-semibold text-slate-700">能源管理</h3>
+        <div id="energyModuleContent"></div>
+      </div>
+      <div id="costModule" class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
+        <h3 class="mb-3 text-sm font-semibold text-slate-700">费用分析</h3>
+        <div id="costModuleContent"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Dimension Drill-down Modal -->
+<div id="dimDrillModal" class="fixed inset-0 z-[100] hidden items-center justify-center" style="background:rgba(15,23,42,0.3);backdrop-filter:blur(4px)">
+  <div class="bg-white rounded-3xl shadow-xl border border-slate-200/70 max-w-[700px] w-full max-h-[80vh] overflow-hidden flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="text-base font-semibold text-slate-700" id="drillModalTitle">维度详情</h3>
+      <button id="btnCloseDrillModal" class="rounded-xl p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition text-lg leading-none">&times;</button>
+    </div>
+    <div class="p-5 overflow-y-auto flex-1" id="drillModalBody"></div>
+  </div>
+</div>
+
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

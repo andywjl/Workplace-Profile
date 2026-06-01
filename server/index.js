@@ -1,10 +1,21 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { getDb } = require('../db/init');
+const { getDb, initSchema } = require('../db/init');
 
 const app = express();
 const PORT = process.env.PORT || 3456;
+
+// Initialize database (schema + seed if empty)
+const db = getDb();
+initSchema(db);
+const bldCount = db.prepare('SELECT COUNT(*) as cnt FROM buildings').get();
+if (bldCount.cnt === 0) {
+  console.log('Seeding database...');
+  require('../db/seed');
+  require('../db/seed_demo_data');
+  console.log('Seed complete.');
+}
 
 app.use(cors());
 app.use(express.json());

@@ -239,7 +239,10 @@ function switchView(view) {
 
   if (view === 'overview') loadOverview();
   else if (view === 'region') loadRegionView();
-  else if (view === 'building') loadBuildingView(state.selectedBuildingId);
+  if (view === 'building') {
+    if (!state.selectedBuildingId) state.selectedBuildingId = 8; // default: 大钟寺广场
+    loadBuildingView(state.selectedBuildingId);
+  }
 }
 
 function updateBreadcrumb() {

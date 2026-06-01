@@ -14,6 +14,7 @@ if (bldCount.cnt === 0) {
   console.log('Seeding database...');
   require('../db/seed');
   require('../db/seed_demo_data');
+  require('../db/seed_measures');
   console.log('Seed complete.');
 }
 

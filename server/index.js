@@ -11,6 +11,18 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ============================================================
+// POST /api/login - Simple auth
+// ============================================================
+app.post('/api/login', (req, res) => {
+  const { account, password } = req.body;
+  if (account === 'admin' && password === 'admin') {
+    res.json({ ok: true, account });
+  } else {
+    res.json({ ok: false, error: '账号或密码错误' });
+  }
+});
+
+// ============================================================
 // Completion rate calculation
 // ============================================================
 

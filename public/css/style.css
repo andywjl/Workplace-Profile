@@ -3,6 +3,20 @@
    Morandi color scheme + Glassmorphism
    ============================================================ */
 
+/* ---- Loading Screen Animations ---- */
+@keyframes loadBounce {
+  0%, 100% { transform: translateY(0); opacity: 0.4; }
+  50%      { transform: translateY(-8px); opacity: 1; }
+}
+@keyframes loadBuild {
+  0%, 100% { transform: scaleY(1); }
+  50%      { transform: scaleY(1.06); }
+}
+.loading-building {
+  animation: loadBuild 1.2s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
 :root {
   --clr-indigo: #6f7bb2;
   --clr-green:  #91a79a;

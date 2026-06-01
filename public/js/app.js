@@ -73,18 +73,130 @@ function hideLoading(container) {
 
 // ---- Initialization ----
 async function init() {
-  setupGeoNav();
-  setupViewNav();
-  setupFilters();
-  setupModals();
-  // Preload dimensions for name mapping
-  try {
-    const dims = await getDimensions();
-    dims.forEach(d => { state.dimNameMap[d.id] = d.name; });
-  } catch (e) {
-    console.error('Failed to preload dimensions:', e);
+  const landingPage = document.getElementById('landingPage');
+  const loadingScreen = document.getElementById('loadingScreen');
+  const loadingHint = document.getElementById('loadingHint');
+  const loginModal = document.getElementById('loginModal');
+
+  const updateHint = (msg) => { if (loadingHint) loadingHint.textContent = msg; };
+
+  // ---- Shared: transition from landing → loading → app ----
+  const startApp = async (account) => {
+    // Fade out landing
+    if (landingPage) {
+      landingPage.style.opacity = '0';
+      setTimeout(() => { landingPage.style.display = 'none'; }, 600);
+    }
+
+    // Show loading
+    if (loadingScreen) {
+      loadingScreen.style.display = 'flex';
+      loadingScreen.style.opacity = '1';
+    }
+
+    if (account) state.account = account;
+
+    setupGeoNav();
+    setupViewNav();
+    setupFilters();
+    setupModals();
+
+    updateHint('正在加载维度数据...');
+    try {
+      const dims = await getDimensions();
+      dims.forEach(d => { state.dimNameMap[d.id] = d.name; });
+    } catch (e) {
+      console.error('Failed to preload dimensions:', e);
+    }
+
+    updateHint('正在加载全国总览...');
+    await loadOverview();
+
+    // Fade out loading
+    if (loadingScreen) {
+      loadingScreen.style.opacity = '0';
+      setTimeout(() => {
+        loadingScreen.style.display = 'none';
+      }, 500);
+    }
+  };
+
+  // ---- "直接进入" button ----
+  const btnEnter = document.getElementById('btnEnterSystem');
+  if (btnEnter) {
+    btnEnter.addEventListener('click', () => startApp(null));
   }
-  await loadOverview();
+
+  // ---- Login modal ----
+  const btnShowLogin = document.getElementById('btnShowLogin');
+  const btnCloseLogin = document.getElementById('btnCloseLogin');
+  const btnLogin = document.getElementById('btnLogin');
+  const loginAccount = document.getElementById('loginAccount');
+  const loginPassword = document.getElementById('loginPassword');
+
+  if (btnShowLogin && loginModal) {
+    btnShowLogin.addEventListener('click', () => {
+      loginModal.style.display = 'flex';
+    });
+  }
+  if (btnCloseLogin && loginModal) {
+    btnCloseLogin.addEventListener('click', () => {
+      loginModal.style.display = 'none';
+    });
+  }
+  // Click backdrop to close
+  if (loginModal) {
+    loginModal.addEventListener('click', (e) => {
+      if (e.target === loginModal) loginModal.style.display = 'none';
+    });
+  }
+
+  const doLogin = async () => {
+    const account = (loginAccount?.value || '').trim();
+    const password = (loginPassword?.value || '').trim();
+    if (!account) {
+      if (loginAccount) { loginAccount.style.borderColor = '#b05050'; loginAccount.focus(); }
+      return;
+    }
+    if (!password) {
+      if (loginPassword) { loginPassword.style.borderColor = '#b05050'; loginPassword.focus(); }
+      return;
+    }
+    try {
+      const res = await apiPost('/api/login', { account, password });
+      if (res.ok) {
+        if (loginModal) loginModal.style.display = 'none';
+        startApp(account);
+      } else {
+        showToast(res.error || '登录失败', 'error');
+      }
+    } catch (err) {
+      showToast('登录验证失败，请检查网络', 'error');
+    }
+  };
+
+  if (btnLogin) btnLogin.addEventListener('click', doLogin);
+  if (loginPassword) loginPassword.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  if (loginAccount) {
+    loginAccount.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+    loginAccount.addEventListener('input', () => { loginAccount.style.borderColor = ''; });
+  }
+
+  // ---- Back to landing page ----
+  const btnBack = document.getElementById('btnBackToLanding');
+  if (btnBack && landingPage) {
+    btnBack.addEventListener('click', () => {
+      disposeCharts();
+      // Show landing, hide main content
+      landingPage.style.display = '';
+      landingPage.style.opacity = '1';
+      if (loadingScreen) loadingScreen.style.display = 'none';
+      // Clear any loaded data
+      clearCache();
+      state.overviewData = null;
+      state.buildingIndicatorsData = null;
+    });
+  }
 }
 
 // ---- Geo Navigation (China / Non-China) ----
@@ -854,6 +966,7 @@ async function loadRegionView() {
 async function loadRegionData(regionId) {
   const panel = $('#viewRegion');
   showLoading(panel);
+  state._regionMeasuresLoaded = false;
   try {
     const data = await fetchRegion(regionId);
     state._regionData = data;
@@ -1097,43 +1210,6 @@ async function setupBuildingSelect(selectedId) {
   const buildings = await getBuildings();
   const selectedBld = buildings.find(b => b.id == selectedId);
 
-  // Check if search wrap already exists (from previous navigation)
-  let wrap = document.getElementById('buildingSearchWrap');
-  let input, dropdown;
-
-  if (wrap) {
-    // Already replaced, just update the input value
-    input = document.getElementById('buildingSearchInput');
-    dropdown = document.getElementById('buildingDropdown');
-    if (input && selectedBld) {
-      input.value = `${selectedBld.name} (${selectedBld.region} · ${selectedBld.city})`;
-    }
-    if (dropdown) dropdown.style.display = 'none';
-  } else {
-    // First time: replace select with searchable input
-    const container = document.getElementById('buildingSelect');
-    if (!container) return;
-
-    const wrapHTML = `
-      <div class="relative" id="buildingSearchWrap" style="min-width:280px">
-        <input id="buildingSearchInput" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm w-full focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-100"
-               placeholder="搜索楼宇名称或城市..." value="${selectedBld ? selectedBld.name + ' (' + selectedBld.region + ' · ' + selectedBld.city + ')' : ''}" autocomplete="off" />
-        <div id="buildingDropdown" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;max-height:260px;width:100%;overflow-y:auto;border-radius:12px;border:1px solid #e2e8f0;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,0.1);z-index:50"></div>
-      </div>`;
-    container.insertAdjacentHTML('afterend', wrapHTML);
-    container.remove();
-
-    input = document.getElementById('buildingSearchInput');
-    dropdown = document.getElementById('buildingDropdown');
-  }
-
-  if (!input || !dropdown) return;
-
-  // Remove old listeners by cloning (simple approach)
-  const newInput = input.cloneNode(true);
-  input.parentNode.replaceChild(newInput, input);
-  input = newInput;
-
   function filterBuildings(query) {
     const q = query.toLowerCase().trim();
     if (!q) return buildings.slice(0, 50);
@@ -1146,6 +1222,8 @@ async function setupBuildingSelect(selectedId) {
   }
 
   function renderDropdown(list) {
+    const dropdown = document.getElementById('buildingDropdown');
+    if (!dropdown) return;
     const shown = list.slice(0, 50);
     if (shown.length === 0) {
       dropdown.innerHTML = '<div class="px-3 py-2 text-xs text-slate-400">未找到匹配楼宇</div>';
@@ -1162,27 +1240,71 @@ async function setupBuildingSelect(selectedId) {
       opt.addEventListener('mousedown', (e) => {
         e.preventDefault();
         const bid = parseInt(opt.dataset.bid);
+        const dd = document.getElementById('buildingDropdown');
+        if (dd) dd.style.display = 'none';
         loadBuildingView(bid);
-        dropdown.style.display = 'none';
       });
     });
   }
 
-  function showDropdown() {
-    const q = input.value.trim();
-    renderDropdown(filterBuildings(q));
-    dropdown.style.display = 'block';
+  // Check if search wrap already exists
+  let wrap = document.getElementById('buildingSearchWrap');
+
+  if (!wrap) {
+    // First time: replace select with searchable input
+    const container = document.getElementById('buildingSelect');
+    if (!container) return;
+
+    const wrapHTML = `
+      <div class="relative" id="buildingSearchWrap" style="min-width:280px">
+        <input id="buildingSearchInput" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm w-full focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-100"
+               placeholder="搜索楼宇名称或城市..." autocomplete="off" />
+        <div id="buildingDropdown" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;max-height:260px;width:100%;overflow-y:auto;border-radius:12px;border:1px solid #e2e8f0;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,0.1);z-index:50"></div>
+      </div>`;
+    container.insertAdjacentHTML('afterend', wrapHTML);
+    container.remove();
+
+    // Set up input event listeners once
+    const input = document.getElementById('buildingSearchInput');
+    if (input) {
+      input.addEventListener('focus', () => {
+        const dd = document.getElementById('buildingDropdown');
+        if (!dd) return;
+        renderDropdown(filterBuildings(input.value));
+        dd.style.display = 'block';
+      });
+      input.addEventListener('input', () => {
+        const dd = document.getElementById('buildingDropdown');
+        if (!dd) return;
+        renderDropdown(filterBuildings(input.value));
+        dd.style.display = 'block';
+      });
+      input.addEventListener('click', () => {
+        const dd = document.getElementById('buildingDropdown');
+        if (!dd) return;
+        renderDropdown(filterBuildings(input.value));
+        dd.style.display = 'block';
+      });
+    }
+
+    // Single global click-to-dismiss handler
+    document.addEventListener('click', function hideBuildingDropdown(e) {
+      const dd = document.getElementById('buildingDropdown');
+      const inp = document.getElementById('buildingSearchInput');
+      if (!dd) return;
+      if (!dd.contains(e.target) && e.target !== inp) {
+        dd.style.display = 'none';
+      }
+    });
   }
 
-  input.addEventListener('focus', () => showDropdown());
-  input.addEventListener('input', () => showDropdown());
-  input.addEventListener('click', () => showDropdown());
-
-  document.addEventListener('click', function hideDropdown(e) {
-    if (!dropdown.contains(e.target) && e.target !== input) {
-      dropdown.style.display = 'none';
-    }
-  });
+  // Update input value for current building
+  const input = document.getElementById('buildingSearchInput');
+  if (input) {
+    input.value = selectedBld ? `${selectedBld.name} (${selectedBld.region} · ${selectedBld.city})` : '';
+  }
+  const dropdown = document.getElementById('buildingDropdown');
+  if (dropdown) dropdown.style.display = 'none';
 }
 
 async function renderBuildingInfo(data, buildingId) {
@@ -1200,15 +1322,13 @@ async function renderBuildingInfo(data, buildingId) {
 
   const editableFields = [
     { key: 'headcount', label: '工位数', type: 'number', fmt: v => v != null ? v : '未填写' },
-    { key: 'scale_tier', label: '规模分档', type: 'text', fmt: v => v || '-' },
     { key: 'building_age', label: '楼龄', type: 'number', fmt: v => v != null ? `${v} 年` : '未填写' },
     { key: 'area_sqm', label: '面积(㎡)', type: 'number', fmt: v => v != null ? `${v} ㎡` : '未填写' },
     { key: 'floors', label: '层数', type: 'number', fmt: v => v || '未填写' },
     { key: 'access_gates', label: '门禁数', type: 'number', fmt: v => v || '未填写' },
     { key: 'business_lines', label: '业务线', type: 'text', fmt: v => v || '-' },
     { key: 'supplier', label: '供应商', type: 'text', fmt: v => v || '-' },
-    { key: 'day1_date', label: 'Day1', type: 'text', fmt: v => v || '-' },
-    { key: 'energy_cost_budget', label: '能源成本预算', type: 'number', fmt: v => v != null ? `¥${(v / 10000).toFixed(1)} 万` : '未填写' },
+    { key: 'day1_date', label: 'Day1时间', type: 'text', fmt: v => v || '-' },
   ];
 
   // Static fields
@@ -1669,8 +1789,8 @@ function measureFormHtml() {
           <input id="mfBudget" type="number" class="w-full rounded-lg border-slate-200 text-xs px-2 py-1.5" placeholder="例: 75000">
         </div>
         <div>
-          <label class="block text-xs text-slate-500 mb-1">预期效果</label>
-          <input id="mfEffect" class="w-full rounded-lg border-slate-200 text-xs px-2 py-1.5" placeholder="描述预期效果">
+          <label class="block text-xs text-slate-500 mb-1">判断标准</label>
+          <input id="mfEffect" class="w-full rounded-lg border-slate-200 text-xs px-2 py-1.5" placeholder="描述判断标准">
         </div>
         <div class="flex items-end gap-2">
           <button id="btnSubmitMeasure" class="rounded-lg bg-indigo-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-indigo-600 transition">提交</button>
@@ -1745,7 +1865,7 @@ function renderBuildingMeasuresView() {
   const measuresHtml = measures.length === 0
     ? '<p class="text-sm text-slate-400 py-4 text-center">暂无匹配措施</p>'
     : `<table class="data-table">
-        <thead><tr><th>措施</th><th>关联维度</th><th>完成阶段</th><th>预算</th><th>预期效果</th><th>状态</th></tr></thead>
+        <thead><tr><th>措施</th><th>关联维度</th><th>完成阶段</th><th>预算</th><th>判断标准</th><th>状态</th></tr></thead>
         <tbody>${measures.map(m => `
           <tr>
             <td class="text-xs font-medium max-w-[240px]" title="${(m.description || '').replace(/"/g, '&quot;')}">${m.name || '-'}</td>
@@ -1830,7 +1950,7 @@ function renderBuildingMeasuresView() {
       if (filter.phase) {
         filtered = filtered.filter(m => m.completion_phase === filter.phase);
       }
-      const headers = ['措施', '关联维度', '完成阶段', '预算(元)', '预期效果', '状态'];
+      const headers = ['措施', '关联维度', '完成阶段', '预算(元)', '判断标准', '状态'];
       const rows = filtered.map(m => [m.name || '', dimIdToName(m.dimension_ids), m.completion_phase || '', m.budget || '', m.expected_effect || '', m.status || '']);
       downloadCSV(`楼宇_${state.selectedBuildingId}_改进措施.csv`, headers, rows);
       showToast('CSV 已导出', 'success');
@@ -2082,7 +2202,7 @@ function exportMeasuresCSV() {
   if (f.dim) measures = measures.filter(m => (m.dimension_ids || '').split(',').map(s => s.trim()).includes(f.dim));
   if (f.phase) measures = measures.filter(m => m.completion_phase === f.phase);
   measures.sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
-  const headers = ['楼宇', '区域', '措施名称', '关联维度', '完成阶段', '预算(元)', '预期效果', '状态'];
+  const headers = ['楼宇', '区域', '措施名称', '关联维度', '完成阶段', '预算(元)', '判断标准', '状态'];
   const rows = measures.map(m => [m.building_name || '', m.region || '', m.name || '', dimIdToName(m.dimension_ids), m.completion_phase || '', m.budget || '', m.expected_effect || '', m.status || '']);
   downloadCSV('改进措施汇总.csv', headers, rows);
   showToast('CSV 已导出', 'success');

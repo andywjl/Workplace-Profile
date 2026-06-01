@@ -1,5 +1,5 @@
 // ============================================================
-// Building Profile System - Main Application
+// Workplace Profile System - Main Application
 // ============================================================
 
 // ---- State ----

@@ -1,5 +1,5 @@
 // ============================================================
-// API Client for Building Profile System
+// API Client for Workplace Profile System
 // ============================================================
 
 const API_BASE = '';

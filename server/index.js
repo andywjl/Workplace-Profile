@@ -805,5 +805,5 @@ app.get('/api/dimensions/stats', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Building Profile API running on http://localhost:${PORT}`);
+  console.log(`Workplace Profile API running on http://localhost:${PORT}`);
 });

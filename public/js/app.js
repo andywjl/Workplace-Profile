@@ -33,6 +33,12 @@ const state = {
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+window.escapeHtml = escapeHtml;
+
 // ---- Helpers ----
 function dimIdToName(dimId) {
   if (!dimId) return '-';
@@ -71,6 +77,129 @@ function hideLoading(container) {
   if (overlay) overlay.remove();
 }
 
+// ---- UI Utilities ----
+
+// Sidebar building expand/collapse (via inline onclick)
+window.toggleBldSubs = function() {
+  const subs = document.getElementById('sidebarBuildingSubs');
+  const icon = document.getElementById('buildingExpandIcon');
+  if (!subs || !icon) return;
+  const isOpen = !subs.classList.contains('hidden');
+  subs.classList.toggle('hidden', isOpen);
+  icon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+};
+
+// openDimPage defined in index.html inline script
+
+// Toggle sidebar region sub-menu
+window.toggleSidebarRegion = function(e) {
+  e.stopPropagation();
+  const subs = document.getElementById('sidebarRegionSubs');
+  const icon = document.getElementById('regionExpandIcon');
+  if (!subs || !icon) return;
+  const isOpen = !subs.classList.contains('hidden');
+  subs.classList.toggle('hidden', isOpen);
+  icon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+  // Also navigate to region view
+  switchView('region');
+};
+
+// Sidebar region sub-item click handlers
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    document.querySelectorAll('.sidebar-region-sub').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        drillToRegion(btn.dataset.region);
+      });
+    });
+  }, 100);
+});
+
+// Counter animation: animate number from start to end
+function animateCounter(el, start, end, suffix, decimals) {
+  const dur = 800;
+  const startTime = performance.now();
+  suffix = suffix || '';
+  decimals = decimals != null ? decimals : (Number.isInteger(end) ? 0 : 1);
+  function tick(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / dur, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+    const current = start + (end - start) * eased;
+    el.textContent = (decimals > 0 ? current.toFixed(decimals) : Math.round(current)) + suffix;
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// Logout
+window.logout = function() {
+  state.user = null;
+  state.token = null;
+  localStorage.removeItem('auth_token');
+  disposeCharts();
+  clearCache();
+  state.overviewData = null;
+  state.buildingIndicatorsData = null;
+  // Reset role restrictions
+  var filterEl = document.getElementById('filterRegion');
+  if (filterEl) { filterEl.value = ''; filterEl.disabled = false; }
+  var vendorLinks = document.querySelectorAll('[data-view="vendor"]');
+  for (var i = 0; i < vendorLinks.length; i++) { vendorLinks[i].style.display = ''; }
+  var saveBtn = document.getElementById('btnSaveIndicators');
+  if (saveBtn) saveBtn.style.display = '';
+  var badge = document.getElementById('userRoleBadge');
+  if (badge) badge.textContent = '';
+  // Hide main content, show landing
+  ['viewOverview','viewRegion','viewBuilding','viewVendor','viewDimDetail'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.classList.add('hidden');
+  });
+  var landing = document.getElementById('landingPage');
+  if (landing) { landing.style.display = ''; landing.style.opacity = '1'; }
+  var loading = document.getElementById('loadingScreen');
+  if (loading) loading.style.display = 'none';
+  var enterBtn = document.getElementById('btnEnterSystem');
+  if (enterBtn) enterBtn.classList.add('hidden');
+  var loginModal = document.getElementById('loginModal');
+  if (loginModal) loginModal.style.display = 'flex';
+  // Clear login fields
+  var la = document.getElementById('loginAccount');
+  var lp = document.getElementById('loginPassword');
+  if (la) la.value = '';
+  if (lp) lp.value = '';
+};
+
+// Show login (called by API 401 handler)
+window.showLogin = function() {
+  var landing = document.getElementById('landingPage');
+  if (landing) { landing.style.display = ''; landing.style.opacity = '1'; }
+  var modal = document.getElementById('loginModal');
+  if (modal) modal.style.display = 'flex';
+  var loading = document.getElementById('loadingScreen');
+  if (loading) loading.style.display = 'none';
+  ['viewOverview','viewRegion','viewBuilding','viewVendor','viewDimDetail'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.classList.add('hidden');
+  });
+};
+
+// Collapsible sidebar
+window.toggleSidebar = function() {
+  const sb = document.getElementById('sidebar');
+  const btn = document.getElementById('sidebarCollapseBtn');
+  if (!sb || !btn) return;
+  var collapsed = sb.classList.toggle('collapsed');
+  btn.textContent = collapsed ? '▶' : '◀';
+  document.documentElement.style.setProperty('--sidebar-w', collapsed ? 'var(--sidebar-collapsed-w)' : '240px');
+  // Resize charts after transition
+  setTimeout(() => {
+    Object.values(window._chartInstances || chartInstances || {}).forEach(c => {
+      try { c.resize(); } catch(e) {}
+    });
+  }, 350);
+};
+
+
 // ---- Initialization ----
 async function init() {
   const landingPage = document.getElementById('landingPage');
@@ -100,6 +229,13 @@ async function init() {
     setupViewNav();
     setupFilters();
     setupModals();
+    // Populate supplier filter
+    try {
+      const blds = await getBuildings();
+      const suppliers = [...new Set(blds.map(b => b.supplier).filter(Boolean))].sort();
+      const sel = $('#filterSupplier');
+      if (sel) suppliers.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+    } catch(e) {}
 
     updateHint('正在加载维度数据...');
     try {
@@ -119,15 +255,60 @@ async function init() {
         loadingScreen.style.display = 'none';
       }, 500);
     }
+
+    // Show user role badge
+    if (state.user) {
+      var badge = document.getElementById('userRoleBadge');
+      if (badge) {
+        var roleNames = { admin: '超级管理员', leadership: '行政管理', regional: '区域负责人', building: '楼长', poc: '专项POC', visitor: '访客' };
+        var roleColors = { admin: '#dc2626', leadership: '#3b82f6', regional: '#8b5cf6', building: '#059669', poc: '#d97706', visitor: '#94a3b8' };
+        badge.textContent = state.user.display_name + ' (' + (roleNames[state.user.role] || state.user.role) + ')';
+        badge.style.color = roleColors[state.user.role] || '#94a3b8';
+      }
+      // Data scope: regional user locked to their region
+      if (state.user.role === 'regional' && state.user.scopes) {
+        var regionScope = state.user.scopes.find(function(s) { return s.scope_type === 'region'; });
+        if (regionScope) {
+          var filterEl = document.getElementById('filterRegion');
+          if (filterEl) { filterEl.value = regionScope.scope_value; filterEl.disabled = true; }
+        }
+      }
+      // Hide vendor sidebar for non-admin/leadership
+      var vendorLinks = document.querySelectorAll('[data-view="vendor"]');
+      for (var i = 0; i < vendorLinks.length; i++) {
+        if (!window.canViewVendor()) vendorLinks[i].style.display = 'none';
+      }
+      // Hide save/edit buttons for visitors
+      if (state.user.role === 'visitor' || state.user.role === 'leadership') {
+        var saveBtn = document.getElementById('btnSaveIndicators');
+        if (saveBtn) saveBtn.style.display = 'none';
+      }
+    }
   };
 
-  // ---- "直接进入" button ----
+  // ---- Permission helpers ----
+  window.canEdit = function() {
+    if (!state.user) return false;
+    return state.user.role === 'admin' || state.user.role === 'building';
+  };
+  window.canEditAny = function() {
+    return state.user && state.user.role === 'admin';
+  };
+  window.canViewVendor = function() {
+    return state.user && (state.user.role === 'admin' || state.user.role === 'leadership');
+  };
+
+  // ---- "登录后进入" button (only shown after login) ----
   const btnEnter = document.getElementById('btnEnterSystem');
   if (btnEnter) {
-    btnEnter.addEventListener('click', () => startApp(null));
+    btnEnter.addEventListener('click', () => {
+      if (loginModal) loginModal.style.display = 'none';
+      startApp(state.user ? state.user.display_name : null);
+    });
   }
 
-  // ---- Login modal ----
+  // ---- Login modal (show immediately) ----
+  if (loginModal) loginModal.style.display = 'flex';
   const btnShowLogin = document.getElementById('btnShowLogin');
   const btnCloseLogin = document.getElementById('btnCloseLogin');
   const btnLogin = document.getElementById('btnLogin');
@@ -165,8 +346,11 @@ async function init() {
     try {
       const res = await apiPost('/api/login', { account, password });
       if (res.ok) {
+        state.user = res.user;
+        state.token = res.token;
+        localStorage.setItem('auth_token', res.token);
         if (loginModal) loginModal.style.display = 'none';
-        startApp(account);
+        startApp(res.user.display_name || res.user.username);
       } else {
         showToast(res.error || '登录失败', 'error');
       }
@@ -215,7 +399,7 @@ function setupGeoNav() {
 
 // ---- View Navigation (3-layer) ----
 function setupViewNav() {
-  $$('.ops-drill-tab').forEach(btn => {
+  $$('.sidebar-nav').forEach(btn => {
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
       switchView(view);
@@ -225,11 +409,22 @@ function setupViewNav() {
 
 function switchView(view) {
   state.currentView = view;
-  $$('.ops-drill-tab').forEach(b => b.classList.toggle('tab-active', b.dataset.view === view));
+  $$('.sidebar-nav').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  // Show/hide building search in sidebar
+  const searchArea = document.getElementById('sidebarBuildingArea');
+  if (searchArea) searchArea.classList.toggle('hidden', view !== 'building');
 
   $('#viewOverview').classList.toggle('hidden', view !== 'overview');
   $('#viewRegion').classList.toggle('hidden', view !== 'region');
   $('#viewBuilding').classList.toggle('hidden', view !== 'building');
+  $('#viewVendor').classList.toggle('hidden', view !== 'vendor');
+  if (view !== 'dimension') { $('#viewDimDetail').classList.add('hidden'); }
+  else {
+    $('#viewOverview').classList.add('hidden');
+    $('#viewRegion').classList.add('hidden');
+    $('#viewBuilding').classList.add('hidden');
+    $('#viewVendor').classList.add('hidden');
+  }
 
   updateBreadcrumb();
   disposeCharts();
@@ -240,9 +435,16 @@ function switchView(view) {
   if (view === 'overview') loadOverview();
   else if (view === 'region') loadRegionView();
   if (view === 'building') {
-    if (!state.selectedBuildingId) state.selectedBuildingId = 8; // default: 大钟寺广场
+    if (!state.selectedBuildingId) {
+      getBuildings().then(function(list) {
+        state.selectedBuildingId = (list && list.length) ? list[0].id : 1;
+        loadBuildingView(state.selectedBuildingId);
+      }).catch(function() { state.selectedBuildingId = 1; loadBuildingView(1); });
+      return;
+    }
     loadBuildingView(state.selectedBuildingId);
   }
+  if (view === 'vendor') loadVendorView();
 }
 
 function updateBreadcrumb() {
@@ -284,15 +486,21 @@ function setupFilters() {
   $('#filterRegion').addEventListener('change', () => {
     if (state.currentView === 'overview') loadOverview();
     else if (state.currentView === 'region') loadRegionView();
+    else if (state.currentView === 'building') applyFiltersToBuildingView();
   });
   $('#filterAsset').addEventListener('change', () => {
     if (state.currentView === 'overview') loadOverview();
     else if (state.currentView === 'region') loadRegionView();
+    else if (state.currentView === 'building') applyFiltersToBuildingView();
+  });
+  $('#filterSupplier').addEventListener('change', () => {
+    if (state.currentView === 'overview') loadOverview();
+    else if (state.currentView === 'region') loadRegionView();
+    else if (state.currentView === 'building') applyFiltersToBuildingView();
   });
   $('#filterPeriod').addEventListener('change', () => {
     state.currentPeriod = $('#filterPeriod').value;
     state.prevPeriod = 'H2_2025';
-    // Sync building view period switcher
     const ps = $('#indicatorPeriodSwitcher');
     if (ps) ps.value = state.currentPeriod;
     if (state.currentView === 'overview') loadOverview();
@@ -309,20 +517,95 @@ function setupModals() {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeDimDrillDown();
   });
+
+  // Global keyboard shortcuts
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
-      closeDimDrillDown();
+    // Cmd+K / Ctrl+K: Open search palette
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      const palette = document.getElementById('cmdPalette');
+      if (palette && palette.style.display === 'flex') {
+        closeCmdPalette();
+      } else {
+        openCmdPalette();
+      }
+      return;
+    }
+    // Escape: close drill modal or cmd palette
+    if (e.key === 'Escape') {
+      const palette = document.getElementById('cmdPalette');
+      if (palette && palette.style.display === 'flex') {
+        closeCmdPalette();
+        return;
+      }
+      if (modal && !modal.classList.contains('hidden')) {
+        closeDimDrillDown();
+      }
     }
   });
+
+  // Cmd palette input handler
+  const cmdInput = document.getElementById('cmdPaletteInput');
+  if (cmdInput) {
+    cmdInput.addEventListener('input', () => renderCmdResults(cmdInput.value));
+    initCmdData();
+  }
 }
 
 function getFilterParams() {
   return {
     region: $('#filterRegion').value,
     asset_type: $('#filterAsset').value,
+    supplier: $('#filterSupplier').value,
     period: state.currentPeriod,
     prev_period: state.prevPeriod
   };
+}
+
+// Filter helper: does a building match active filters?
+function buildingMatchesActiveFilters(b) {
+  if (!b) return false;
+  var region = $('#filterRegion').value;
+  var asset = $('#filterAsset').value;
+  var supplier = $('#filterSupplier').value;
+  if (region && b.region !== region) return false;
+  if (asset && b.asset_type !== asset) return false;
+  if (supplier && b.supplier !== supplier) return false;
+  return true;
+}
+
+// Back-fill filter dropdowns to reflect currently selected building
+function syncFiltersToBuilding(bld) {
+  if (!bld) return;
+  var rf = $('#filterRegion');
+  if (rf && !rf.disabled && bld.region) rf.value = bld.region;
+  var af = $('#filterAsset');
+  if (af && bld.asset_type) af.value = bld.asset_type;
+  var sf = $('#filterSupplier');
+  if (sf) {
+    var found = false;
+    for (var i = 0; i < sf.options.length; i++) { if (sf.options[i].value === bld.supplier) { found = true; break; } }
+    sf.value = found ? bld.supplier : '';
+  }
+}
+
+// Apply filters in building view: switch to first matching building if current doesn't match
+async function applyFiltersToBuildingView() {
+  try {
+    var buildings = await getBuildings();
+    var cur = buildings.find(function(b) { return b.id == state.selectedBuildingId; });
+    if (cur && buildingMatchesActiveFilters(cur)) {
+      if (setupBuildingSelect._renderFiltered) setupBuildingSelect._renderFiltered();
+      return;
+    }
+    var matches = buildings.filter(buildingMatchesActiveFilters);
+    if (matches.length > 0) {
+      loadBuildingView(matches[0].id);
+    } else {
+      showToast('没有符合当前筛选条件的楼宇', 'error');
+      if (setupBuildingSelect._renderFiltered) setupBuildingSelect._renderFiltered();
+    }
+  } catch (e) { console.error('applyFiltersToBuildingView failed:', e); }
 }
 
 // ============================================================
@@ -338,7 +621,10 @@ async function loadOverview() {
     state.overviewData = data;
     renderKpiCards(data, 'kpiCards');
     renderKey4Dashboard('key4KpiCards', 'chartKey4Region', data, showDimDrillDown);
-    renderTrendCompareChart('chartTrendCompare', data.dimension_rates, data.prev_dimension_rates, 'trendSummary', showDimDrillDown);
+    // Map to radar-compatible field names
+    const radarH1 = (data.dimension_rates || []).map(d => ({ ...d, dimension_name: d.name }));
+    const radarH2 = (data.prev_dimension_rates || []).map(d => ({ ...d, dimension_name: d.name }));
+    renderRadarChart('chartRadarOverview', radarH1, radarH2);
     renderDimRegionHeatmap('chartDimRegionHeatmap', data, (region, dimId, dimName) => {
       $('#filterRegion').value = region;
       switchView('region');
@@ -349,6 +635,9 @@ async function loadOverview() {
     renderBuildingTable(data.building_rates || []);
     renderMeasuresTable(data.measure_stats || []);
     $('#dataInfo').textContent = `数据填报率: ${data.fill_rate}% | ${data.filled_values}/${data.total_possible}`;
+    generateSummaryBanner(data);
+    // Apply staggered entrance
+    applyStaggeredEntrance('#viewOverview');
   } catch (err) {
     console.error('loadOverview failed:', err);
     showToast('加载全国总览数据失败', 'error');
@@ -372,22 +661,459 @@ function renderKpiCards(data, containerId) {
   }
 
   const cards = [
-    { label: '职场总数', value: data.total_buildings, sub: `自持园区 ${data.self_built} / 租赁职场 ${data.leased}`, color: 'slate' },
-    { label: '综合达标率', value: data.overall_rate != null ? data.overall_rate + '%' : '--', sub: trendSub, subColor: `color:${trendColor === 'green' ? '#4a7c5f' : trendColor === 'rose' ? '#b05050' : '#94a3b8'}`, color: data.overall_rate != null && data.overall_rate >= 100 ? 'green' : 'rose' },
-    { label: '改进措施数', value: (data.measure_stats || []).reduce((s, m) => s + m.cnt, 0), sub: '', color: 'indigo' },
-    { label: '数据填报率', value: data.fill_rate + '%', sub: `${data.filled_values} / ${data.total_possible}`, color: 'amber' },
-    { label: '未达标楼宇', value: data.not_passing_count, sub: data.total_buildings > 0 ? `占比 ${Math.round(data.not_passing_count / data.total_buildings * 100)}%` : '', color: data.not_passing_count > 0 ? 'rose' : 'green' },
+    { label: '职场总数', value: data.total_buildings, sub: `自持园区 ${data.self_built} / 租赁职场 ${data.leased}`, suffix: '', spark: 'totalBuildings' },
+    { label: '综合达标率', value: data.overall_rate != null ? data.overall_rate : '--', suffix: '%', isPct: true, sub: trendSub, subColor: `color:${trendColor === 'green' ? '#059669' : trendColor === 'rose' ? '#dc2626' : '#94a3b8'}` },
+    { label: '改进措施数', value: (data.measure_stats || []).reduce((s, m) => s + m.cnt, 0), suffix: '', sub: `未开始 ${(data.measure_stats||[]).filter(m=>m.status==='未开始').reduce((s,m)=>s+m.cnt,0)} / 进行中 ${(data.measure_stats||[]).filter(m=>m.status==='进行中').reduce((s,m)=>s+m.cnt,0)}` },
+    { label: '数据填报率', value: data.fill_rate, suffix: '%', isPct: true, sub: `${data.filled_values} / ${data.total_possible}` },
+    { label: '未达标楼宇', value: data.not_passing_count, suffix: '', sub: data.total_buildings > 0 ? `占比 ${Math.round(data.not_passing_count / data.total_buildings * 100)}%` : '' },
   ];
 
-  container.innerHTML = cards.map(c => {
+  container.innerHTML = cards.map((c, i) => {
     const subColor = c.subColor || '';
+    const valColor = c.subColor ? c.subColor.replace('color:', '') : '';
+    const valId = `kpi-val-${containerId}-${i}`;
     return `
-    <div class="kpi-card">
-      <div class="kpi-value" style="color:${c.color === 'green' ? '#4a7c5f' : c.color === 'rose' ? '#b05050' : c.color === 'indigo' ? '#41558b' : c.color === 'amber' ? '#9a7541' : '#475569'}">${c.value}</div>
+    <div class="kpi-card stagger-${i+1}">
+      <div class="kpi-value" id="${valId}">${c.isPct ? c.value + '%' : c.value}</div>
       <div class="kpi-label">${c.label}</div>
       ${c.sub ? `<div class="kpi-sub" style="${subColor}">${c.sub}</div>` : ''}
+      <div class="kpi-sparkline" id="spark-${containerId}-${i}"></div>
     </div>`;
   }).join('');
+
+  // Render sparklines for each KPI card
+  setTimeout(() => {
+    cards.forEach((c, i) => {
+      const sparkDom = document.getElementById(`spark-${containerId}-${i}`);
+      if (!sparkDom) return;
+      renderKpiSparkline(sparkDom, containerId === 'kpiCards' ? data : null, i);
+    });
+  }, 100);
+}
+
+// ---- KPI Sparkline (tiny inline chart) ----
+function renderKpiSparkline(dom, data, index) {
+  if (!dom) return;
+  // Generate synthetic sparkline data based on the metric
+  let points = [];
+  const seed = index * 7 + 3;
+  const base = 50 + (seed % 30);
+  const amp = 8 + (seed % 12);
+  for (let i = 0; i < 20; i++) {
+    const t = i / 19;
+    points.push(base + Math.sin(t * Math.PI * 2 + seed) * amp + (t - 0.5) * 10 + (Math.random() - 0.5) * 4);
+  }
+  const w = dom.clientWidth || 140;
+  const h = 28;
+  const pad = 2;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || 1;
+  const xStep = (w - pad * 2) / (points.length - 1);
+
+  let pathD = points.map((v, i) => {
+    const x = pad + i * xStep;
+    const y = pad + (1 - (v - min) / range) * (h - pad * 2);
+    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  // Gradient area fill
+  dom.innerHTML = `
+    <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block">
+      <defs>
+        <linearGradient id="sparkGrad${index}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2"/>
+          <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <path d="${pathD} L${pad + (points.length-1)*xStep},${h-pad} L${pad},${h-pad} Z" fill="url(#sparkGrad${index})"/>
+      <path d="${pathD}" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${pad + (points.length-1)*xStep}" cy="${pad + (1-(points[points.length-1]-min)/range)*(h-pad*2)}" r="2.5" fill="#3b82f6" stroke="#fff" stroke-width="1"/>
+    </svg>`;
+}
+
+// ---- Building Tags ----
+const TAG_PRESETS = ['重点关注', '标杆楼宇', '整改中', '新入驻', '待评估', '优秀'];
+const TAG_COLORS = {
+  '重点关注': '#fef2f2|#dc2626|#fecaca',
+  '标杆楼宇': '#ecfdf5|#059669|#a7f3d0',
+  '整改中': '#fffbeb|#d97706|#fde68a',
+  '新入驻': '#eff6ff|#3b82f6|#bfdbfe',
+  '待评估': '#f8fafc|#64748b|#e2e8f0',
+  '优秀': '#f0fdf4|#16a34a|#bbf7d0',
+};
+
+function getBuildingTags() {
+  try { return JSON.parse(localStorage.getItem('bldTags') || '{}'); } catch(e) { return {}; }
+}
+function setBuildingTags(tags) { localStorage.setItem('bldTags', JSON.stringify(tags)); }
+window.addBuildingTag = function(bldId, tag) {
+  const tags = getBuildingTags();
+  if (!tags[bldId]) tags[bldId] = [];
+  if (!tags[bldId].includes(tag)) tags[bldId].push(tag);
+  setBuildingTags(tags);
+  renderBuildingTags(bldId);
+};
+window.removeBuildingTag = function(bldId, tag) {
+  const tags = getBuildingTags();
+  if (tags[bldId]) tags[bldId] = tags[bldId].filter(t => t !== tag);
+  setBuildingTags(tags);
+  renderBuildingTags(bldId);
+};
+function renderBuildingTags(bldId) {
+  const container = document.getElementById('bldTagContainer');
+  if (!container) return;
+  const tags = getBuildingTags();
+  const bldTags = tags[bldId] || [];
+  container.innerHTML = bldTags.map(t => {
+    const [bg, color, border] = (TAG_COLORS[t] || '#f8fafc|#64748b|#e2e8f0').split('|');
+    return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-medium cursor-pointer" style="background:${bg};color:${color};border:1px solid ${border}" title="点击移除" onclick="removeBuildingTag(${bldId},'${t}')">${t} ×</span>`;
+  }).join('') + `
+    <select class="text-[0.65rem] rounded-full px-1.5 py-0.5 border border-slate-200 bg-white text-slate-500 cursor-pointer" onchange="addBuildingTag(${bldId},this.value);this.value=''" style="max-width:80px">
+      <option value="">+标签</option>
+      ${TAG_PRESETS.filter(t => !bldTags.includes(t)).map(t => `<option value="${t}">${t}</option>`).join('')}
+    </select>`;
+}
+
+// ---- Cmd+K Search Palette ----
+let cmdAllData = [];
+function openCmdPalette() {
+  const palette = document.getElementById('cmdPalette');
+  const input = document.getElementById('cmdPaletteInput');
+  if (!palette || !input) return;
+  palette.classList.remove('hidden');
+  palette.style.display = 'flex';
+  input.value = '';
+  input.focus();
+  renderCmdResults('');
+}
+window.closeCmdPalette = function() {
+  const palette = document.getElementById('cmdPalette');
+  if (palette) { palette.style.display = 'none'; palette.classList.add('hidden'); }
+};
+async function initCmdData() {
+  try {
+    const [blds, dims] = await Promise.all([getBuildings(), getDimensions()]);
+    cmdAllData = [
+      ...blds.map(b => ({ type: '楼宇', name: b.name, sub: `${b.region} · ${b.city}`, action: () => { state.selectedBuildingId = b.id; switchView('building'); closeCmdPalette(); } })),
+      ...dims.map(d => ({ type: '维度', name: d.name, sub: d.id, action: () => { showDimDrillDown(d.id, d.name); closeCmdPalette(); } })),
+    ];
+  } catch(e) {}
+}
+function renderCmdResults(query) {
+  const container = document.getElementById('cmdPaletteResults');
+  if (!container) return;
+  const q = query.toLowerCase().trim();
+  let results = q ? cmdAllData.filter(d => d.name.toLowerCase().includes(q) || d.sub.toLowerCase().includes(q)).slice(0, 20) : cmdAllData.slice(0, 12);
+  if (results.length === 0) {
+    container.innerHTML = '<div class="px-4 py-6 text-center text-sm text-slate-400">未找到匹配结果</div>';
+  } else {
+    container.innerHTML = results.map((r, i) => `
+      <div class="cmd-result flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition text-sm ${i===0?'bg-blue-50':''}" data-idx="${i}" onclick="this.querySelector('.cmd-action-btn').click()">
+        <div class="flex items-center gap-3">
+          <span class="w-7 h-7 rounded-lg flex items-center justify-center text-[0.6rem] font-semibold ${r.type==='楼宇'?'bg-blue-50 text-blue-600':'bg-purple-50 text-purple-600'}">${r.type[0]}</span>
+          <div><div class="text-slate-700">${r.name}</div><div class="text-[0.65rem] text-slate-400">${r.sub}</div></div>
+        </div>
+        <button class="cmd-action-btn hidden" onclick="arguments[0].stopPropagation()">→</button>
+      </div>`).join('');
+    container.querySelectorAll('.cmd-result').forEach(el => {
+      el.addEventListener('click', () => { const r = results[parseInt(el.dataset.idx)]; if (r && r.action) r.action(); });
+    });
+  }
+}
+
+// ---- Building Compare ----
+window.compareList = [];
+window.addToCompare = async function(bldId) {
+  if (window.compareList.includes(bldId)) { showToast('已在对比列表中', 'error'); return; }
+  if (window.compareList.length >= 3) { window.compareList.shift(); }
+  window.compareList.push(bldId);
+  showToast(`已加入对比 (${window.compareList.length}/3)`, 'success');
+  if (window.compareList.length >= 2) renderComparePanel();
+};
+window.closeCompare = function() {
+  document.getElementById('comparePanel').classList.add('hidden');
+  window.compareList = [];
+};
+window.refreshCompare = function() { if (window.compareList.length >= 2) renderComparePanel(); };
+async function renderComparePanel() {
+  const panel = document.getElementById('comparePanel');
+  const content = document.getElementById('compareContent');
+  const names = document.getElementById('compareNames');
+  if (!panel || !content) return;
+  panel.classList.remove('hidden');
+  try {
+    const blds = await getBuildings();
+    const selected = blds.filter(b => window.compareList.includes(b.id));
+    if (names) names.textContent = selected.map(b => b.name).join('  vs  ');
+    const indicatorsData = await Promise.all(selected.map(b => fetchBuildingIndicators(b.id, state.currentPeriod)));
+    const dims = (indicatorsData[0] && indicatorsData[0].dimensions) ? indicatorsData[0].dimensions.map(d => d.dimension_name) : [];
+    const rates = indicatorsData.map(data => (data.dimensions || []).map(d => d.completion_rate));
+
+    content.innerHTML = `<table class="data-table">
+      <thead><tr><th>维度</th>${selected.map(b => `<th>${b.name}</th>`).join('')}<th>差异</th></tr></thead>
+      <tbody>${dims.map((dim, i) => {
+        const vals = rates.map(r => r[i]);
+        const diff = vals.length >= 2 ? Math.abs(vals[0] - vals[1]) : 0;
+        return `<tr><td class="font-medium">${dim}</td>${vals.map(v => `<td><span class="badge ${v>=90?'badge-green':v>=70?'badge-amber':'badge-red'}">${v!=null?v+'%':'--'}</span></td>`).join('')}<td class="text-xs text-slate-400">${diff.toFixed(1)}%</td></tr>`;
+      }).join('')}</tbody></table>`;
+  } catch(e) { console.error('Compare failed:', e); }
+}
+
+// ---- Measure Gantt Chart ----
+function renderMeasuresGantt(containerId, measures) {
+  const container = document.getElementById(containerId);
+  if (!container || !measures.length) return;
+
+  const now = new Date();
+  const startMonth = 0; // January
+  const endMonth = 11; // December
+  const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const totalMonths = 12;
+  const colW = Math.max(40, (700 / totalMonths));
+
+  // Filter measures with dates for timeline display
+  const withDates = measures.filter(m => m.planned_end_date).slice(0, 30);
+  if (withDates.length === 0) {
+    // Fallback: show all measures as status bars
+    const phases = ['未开始','进行中','已完成'];
+    const colors = { '未开始':'#e2e8f0','进行中':'#3b82f6','已完成':'#059669' };
+    let h = '<div style="font-size:0.7rem;overflow-x:auto"><div style="display:flex;min-width:600px">';
+    h += '<div style="flex:0 0 180px;font-weight:600;padding:6px 8px;border-bottom:2px solid #e2e8f0">措施名称</div>';
+    h += '<div style="flex:1;font-weight:600;padding:6px 8px;border-bottom:2px solid #e2e8f0;color:#94a3b8">状态</div></div>';
+    measures.slice(0,30).forEach(m => {
+      const idx = phases.indexOf(m.status);
+      h += '<div style="display:flex;min-width:600px;align-items:center;padding:2px 0;border-bottom:1px solid #f1f5f9;font-size:0.7rem">' +
+        '<div style="flex:0 0 180px;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.name||'-')+'</div>' +
+        '<div style="flex:1;padding:4px"><div style="width:'+((idx+1)*25)+'%;height:18px;border-radius:4px;background:'+(colors[m.status]||'#e2e8f0')+';text-align:center;line-height:18px;color:#fff;font-size:0.6rem;min-width:40px">'+m.status+'</div></div></div>';
+    });
+    h += '</div>';
+    container.innerHTML = h;
+    return;
+  }
+
+  // Timeline-based Gantt
+  let html = '<div style="font-size:0.65rem;overflow-x:auto"><div style="display:flex;min-width:' + (180 + totalMonths * colW) + 'px">';
+  html += '<div style="flex:0 0 180px;font-weight:600;padding:6px 8px;border-bottom:2px solid #e2e8f0;white-space:nowrap">措施名称</div>';
+  const todayMonth = now.getMonth();
+  months.forEach((m, i) => {
+    const isCurrent = i === todayMonth;
+    html += '<div style="width:' + colW + 'px;text-align:center;font-weight:600;padding:6px 2px;border-bottom:2px solid #e2e8f0;color:' + (isCurrent ? '#3b82f6' : '#94a3b8') + '">' + m + '</div>';
+  });
+  html += '</div>';
+
+  // Today marker line
+  html += '<div style="position:relative;min-width:' + (180 + totalMonths * colW) + 'px">';
+  html += '<div style="position:absolute;left:' + (180 + todayMonth * colW + colW/2) + 'px;top:0;bottom:0;width:2px;background:#ef4444;z-index:2;opacity:0.5"></div>';
+
+  withDates.forEach(m => {
+    const planDate = new Date(m.planned_end_date);
+    const planMonth = planDate.getMonth() + (planDate.getFullYear() - now.getFullYear()) * 12;
+    const barStart = todayMonth;
+    const barEnd = Math.max(todayMonth + 1, planMonth);
+    const barW = (barEnd - barStart) * colW;
+    const barLeft = 180 + barStart * colW;
+
+    const isOverdue = m.status !== '已完成' && planDate < now;
+    const barColor = m.status === '已完成' ? '#22c55e' : isOverdue ? '#ef4444' : '#3b82f6';
+    const textColor = '#fff';
+
+    html += '<div style="display:flex;min-width:' + (180 + totalMonths * colW) + 'px;align-items:center;padding:3px 0;border-bottom:1px solid #f1f5f9;position:relative">' +
+      '<div style="flex:0 0 180px;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.65rem" title="' + (m.name||'').replace(/"/g,'&quot;') + '">' + (m.name||'-') + '</div>' +
+      '<div style="position:relative;height:22px;flex:1">' +
+        '<div style="position:absolute;left:' + barLeft + 'px;width:' + Math.max(barW, 30) + 'px;height:18px;border-radius:4px;background:' + barColor + ';line-height:18px;color:' + textColor + ';text-align:center;font-size:0.6rem;overflow:hidden;white-space:nowrap">' +
+          m.planned_end_date + (isOverdue ? ' ⚠' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+
+  html += '</div></div>';
+  container.innerHTML = html;
+}
+
+// ---- Effect Validation (Before/After) ----
+window.toggleEffectValidation = async function() {
+  const section = document.getElementById('effectValidationSection');
+  if (!section) return;
+  if (!section.classList.contains('hidden')) {
+    section.classList.add('hidden');
+    return;
+  }
+  section.classList.remove('hidden');
+  section.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">正在分析指标变化...</p>';
+
+  try {
+    // Fetch H2_2025 data for comparison
+    const h2Data = await fetchBuildingIndicators(state.selectedBuildingId, 'H2_2025');
+    const h1Data = state.buildingIndicatorsData;
+    const measures = state.buildingMeasuresAll || [];
+
+    if (!h1Data || !h2Data) {
+      section.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">暂无历史数据可供对比</p>';
+      return;
+    }
+
+    const h1Dims = {};
+    const h2Dims = {};
+    (h1Data.dimensions || []).forEach(d => { h1Dims[d.dimension_id] = d.completion_rate; });
+    (h2Data.dimensions || []).forEach(d => { h2Dims[d.dimension_id] = d.completion_rate; });
+
+    // For each measure, compare linked dimensions Before vs After
+    const comparisons = [];
+    measures.forEach(m => {
+      const dims = (m.dimension_ids || '').split(',').map(s => s.trim()).filter(Boolean);
+      dims.forEach(dimId => {
+        if (!comparisons.find(c => c.measureId === m.id && c.dimId === dimId)) {
+          comparisons.push({
+            measureName: m.name || '-',
+            measureId: m.id,
+            dimId: dimId,
+            dimName: state.dimNameMap[dimId] || dimId,
+            before: h2Dims[dimId] != null ? h2Dims[dimId] : null,
+            after: h1Dims[dimId] != null ? h1Dims[dimId] : null,
+            status: m.status,
+            initiator: m.initiator || '字节'
+          });
+        }
+      });
+    });
+
+    if (comparisons.length === 0) {
+      section.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">措施未关联维度，无法对比</p>';
+      return;
+    }
+
+    // Stats
+    let improved = 0, declined = 0, unchanged = 0;
+    const validComparisons = comparisons.filter(c => c.before != null && c.after != null);
+    validComparisons.forEach(c => {
+      const delta = c.after - c.before;
+      if (delta > 3) improved++;
+      else if (delta < -3) declined++;
+      else unchanged++;
+    });
+
+    const avgImprovement = validComparisons.length > 0
+      ? (validComparisons.reduce((s,c) => s + (c.after - c.before), 0) / validComparisons.length).toFixed(1)
+      : '—';
+
+    section.innerHTML = `
+      <div class="flex items-center justify-between mb-3">
+        <h4 class="text-sm font-semibold text-slate-700">📈 措施效果验证 (Before/After)</h4>
+        <span class="text-xs text-slate-400">H2 2025 → H1 2026</span>
+      </div>
+      <div class="grid grid-cols-4 gap-3 mb-4">
+        <div class="rounded-xl bg-white p-3 text-center">
+          <div class="text-lg font-bold text-green-600">${improved}</div>
+          <div class="text-[0.6rem] text-slate-400">改善 ↑</div>
+        </div>
+        <div class="rounded-xl bg-white p-3 text-center">
+          <div class="text-lg font-bold text-red-600">${declined}</div>
+          <div class="text-[0.6rem] text-slate-400">下降 ↓</div>
+        </div>
+        <div class="rounded-xl bg-white p-3 text-center">
+          <div class="text-lg font-bold text-slate-600">${unchanged}</div>
+          <div class="text-[0.6rem] text-slate-400">持平 →</div>
+        </div>
+        <div class="rounded-xl bg-white p-3 text-center">
+          <div class="text-lg font-bold" style="color:${parseFloat(avgImprovement) >= 0 ? '#059669' : '#dc2626'}">${avgImprovement}%</div>
+          <div class="text-[0.6rem] text-slate-400">平均变化</div>
+        </div>
+      </div>
+      <div class="frozen-pane" style="max-height:360px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:12px">
+      <table class="data-table">
+        <thead><tr><th>措施</th><th>维度</th><th>H2 2025</th><th>H1 2026</th><th>变化</th><th>判断</th></tr></thead>
+        <tbody>${comparisons.map(c => {
+          const delta = c.before != null && c.after != null ? (c.after - c.before) : null;
+          const deltaStr = delta != null ? (delta > 0 ? '+' : '') + delta.toFixed(1) + '%' : '—';
+          const deltaColor = delta != null ? (delta > 3 ? '#059669' : delta < -3 ? '#dc2626' : '#94a3b8') : '#94a3b8';
+          const verdict = delta != null ? (delta > 10 ? '✅ 显著改善' : delta > 3 ? '👍 改善' : delta < -3 ? '⚠️ 下降' : '→ 持平') : '无数据';
+          return '<tr>' +
+            '<td class="text-xs max-w-[160px] truncate" title="' + (c.measureName||'').replace(/"/g,'&quot;') + '">' + (c.measureName||'-') + '</td>' +
+            '<td class="text-xs"><span class="dim-color-bar" style="background:' + (DIM_COLORS[c.dimId] || '#8d9aa8') + '"></span>' + c.dimName + '</td>' +
+            '<td class="text-xs">' + (c.before != null ? c.before + '%' : '—') + '</td>' +
+            '<td class="text-xs font-semibold">' + (c.after != null ? c.after + '%' : '—') + '</td>' +
+            '<td style="color:' + deltaColor + ';font-weight:600;font-size:0.75rem">' + deltaStr + '</td>' +
+            '<td class="text-xs" style="color:' + deltaColor + '">' + verdict + '</td>' +
+          '</tr>';
+        }).join('')}</tbody></table></div>`;
+  } catch(e) {
+    section.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">分析失败: ' + e.message + '</p>';
+  }
+};
+
+// ---- Gantt Toggle for Building Measures ----
+window.toggleBldMeasuresGantt = function() {
+  const container = document.getElementById('ganttChartContainer');
+  if (container) {
+    container.remove();
+    return;
+  }
+  const measuresSection = document.getElementById('buildingMeasures');
+  if (!measuresSection) return;
+  const ganttDiv = document.createElement('div');
+  ganttDiv.id = 'ganttChartContainer';
+  ganttDiv.className = 'mt-3 p-3 bg-white rounded-xl border border-slate-200';
+  ganttDiv.innerHTML = '<h4 class="text-xs font-semibold text-slate-700 mb-2">措施时间线甘特图</h4><div id="ganttChart"></div>';
+  measuresSection.appendChild(ganttDiv);
+  renderMeasuresGantt('ganttChart', state.buildingMeasuresAll || []);
+};
+
+// ---- PDF Export ----
+window.exportPDF = function() {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+  const title = state.currentView === 'overview' ? '全国总览' : state.currentView === 'region' ? '区域分析' : '单楼宇档案';
+  const content = document.querySelector('#chinaPage .flex-1') || document.querySelector('#viewOverview');
+  printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Workplace Profile - ${title}</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <link rel="stylesheet" href="${window.location.origin}/css/style.css">
+    <style>body{font-family:Inter,sans-serif;padding:30px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+    </head><body>${content ? content.innerHTML : ''}</body></html>`);
+  printWindow.document.close();
+  setTimeout(() => printWindow.print(), 500);
+};
+
+// ---- Summary Banner ----
+function generateSummaryBanner(data) {
+  const banner = $('#summaryBanner');
+  const text = $('#summaryBannerText');
+  if (!banner || !text) return;
+
+  const regions = ['京区', '北区', '东区', '西区', '南区'];
+  const regionRates = regions.map(r => {
+    const blds = (data.building_rates || []).filter(b => b.region === r);
+    const rates = blds.map(b => b.overall_rate).filter(v => v != null);
+    const avg = rates.length > 0 ? Math.round(rates.reduce((s,v)=>s+v,0)/rates.length) : null;
+    return { region: r, avg };
+  }).filter(r => r.avg != null);
+
+  const best = regionRates.reduce((a,b) => (a.avg > b.avg ? a : b), regionRates[0]);
+  const worst = regionRates.reduce((a,b) => (a.avg < b.avg ? a : b), regionRates[0]);
+
+  let msg = `📊 全国 ${data.total_buildings} 栋楼宇综合达标率 <b>${data.overall_rate}%</b>`;
+  if (best && worst && best.region !== worst.region) {
+    msg += ` · <b style="color:#059669">${best.region}</b> 最高（${best.avg}%）`;
+    msg += ` · <b style="color:#dc2626">${worst.region}</b> 偏低（${worst.avg}%）`;
+  }
+  if (data.not_passing_count > 0) {
+    msg += ` · ${data.not_passing_count} 栋未达标`;
+  }
+  text.innerHTML = msg;
+  banner.classList.remove('hidden');
+}
+
+// ---- Staggered entrance helper ----
+function applyStaggeredEntrance(containerSelector) {
+  const container = document.querySelector(containerSelector);
+  if (!container) return;
+  const cards = container.querySelectorAll('.content-card, .kpi-card');
+  cards.forEach((card, i) => {
+    card.style.animation = 'none';
+    card.offsetHeight; // force reflow
+    card.style.animation = `staggerIn 0.4s cubic-bezier(0.16,1,0.3,1) ${i * 0.04}s both`;
+  });
 }
 
 // ---- Region Summary Cards ----
@@ -456,6 +1182,15 @@ function renderRegionSummary(buildingRates) {
 window.drillToRegion = function(region) {
   $('#filterRegion').value = region;
   state.selectedRegion = region;
+  // Highlight active region sub-item in sidebar
+  document.querySelectorAll('.sidebar-region-sub').forEach(b => {
+    b.classList.toggle('active', b.dataset.region === region);
+  });
+  // Ensure region sub-menu is expanded
+  const subs = document.getElementById('sidebarRegionSubs');
+  if (subs) subs.classList.remove('hidden');
+  const icon = document.getElementById('regionExpandIcon');
+  if (icon) icon.style.transform = 'rotate(90deg)';
   switchView('region');
 };
 
@@ -492,7 +1227,7 @@ function showDimDrillDown(dimId, dimName) {
   const rows = [...failing, ...passing].map((b, i) => `
     <tr>
       <td class="text-xs text-slate-400">${i + 1}</td>
-      <td><a onclick="navigateToBuilding(${b.building_id})">${b.name || '-'}</a></td>
+      <td><a onclick="navigateToBuilding(${b.building_id})">${b.name || '-'}</a> <button onclick="event.stopPropagation();addToCompare(${b.building_id})" class="text-[0.6rem] text-slate-300 hover:text-blue-500 ml-1" title="加入对比">⊕</button></td>
       <td class="text-xs">${b.region || '-'}</td>
       <td class="text-xs">${b.city || '-'}</td>
       <td class="text-xs">${b.asset_type || '-'}</td>
@@ -650,7 +1385,7 @@ function renderBuildingTableBody() {
         <td>${b.region || '-'}</td>
         <td>${b.city || '-'}</td>
         <td>${b.asset_type || '-'}</td>
-        <td>${b.scale_tier || '-'}</td>
+        <td>${b.supplier || '-'}</td>
         <td class="text-right">${b.measures_count || 0}</td>
         <td class="text-right">${b.failing_dim_count || 0}</td>
         <td><span class="badge ${rateClass}">${rate != null ? rate + '%' : '无数据'}</span>${trendIcon(b)}</td>
@@ -665,7 +1400,7 @@ function renderBuildingTableBody() {
         ${th('区域', 'region')}
         ${th('城市', 'city')}
         ${th('资产性质', 'asset_type')}
-        ${th('规模分档', 'scale_tier')}
+        ${th('供应商', 'supplier')}
         ${th('改进措施数', 'measures_count', 'text-right')}
         ${th('未达标维度', 'failing_dim_count', 'text-right')}
         ${th('综合完成率', 'overall_rate')}
@@ -958,6 +1693,10 @@ async function loadRegionView() {
       $$('.region-tag').forEach(t => t.classList.remove('active'));
       tag.classList.add('active');
       state.selectedRegion = tag.dataset.region;
+      // Highlight sidebar sub-item
+      document.querySelectorAll('.sidebar-region-sub').forEach(b => {
+        b.classList.toggle('active', b.dataset.region === tag.dataset.region);
+      });
       await loadRegionData(tag.dataset.region);
     });
   });
@@ -971,7 +1710,12 @@ async function loadRegionData(regionId) {
   showLoading(panel);
   state._regionMeasuresLoaded = false;
   try {
-    const data = await fetchRegion(regionId);
+    const data = await fetchRegion(regionId, {
+      asset_type: $('#filterAsset').value,
+      supplier: $('#filterSupplier').value,
+      period: state.currentPeriod,
+      prev_period: state.prevPeriod
+    });
     state._regionData = data;
     renderKpiCards(data, 'regionKpiCards');
     renderDimBarChart('chartRegionDim', data.dimension_rates);
@@ -1030,9 +1774,10 @@ function renderRegionBuildingTableBody() {
     return `
       <tr>
         <td class="text-xs text-slate-400">${i + 1}</td>
-        <td><a onclick="navigateToBuilding(${b.building_id})">${b.name}</a></td>
+        <td><a onclick="navigateToBuilding(${b.building_id})">${b.name}</a> <button onclick="event.stopPropagation();addToCompare(${b.building_id})" class="text-[0.6rem] text-slate-300 hover:text-blue-500 ml-1" title="加入对比">⊕</button></td>
         <td>${b.city || '-'}</td>
         <td>${b.asset_type || '-'}</td>
+        <td>${b.supplier || '-'}</td>
         <td class="text-right">${b.measures_count || 0}</td>
         <td class="text-right">${b.failing_dim_count || 0}</td>
         <td><span class="badge ${rateClass}">${rate != null ? rate + '%' : '无数据'}</span>${trendIcon(b)}</td>
@@ -1046,11 +1791,12 @@ function renderRegionBuildingTableBody() {
         ${th('楼宇名称', 'name')}
         ${th('城市', 'city')}
         ${th('资产性质', 'asset_type')}
+        ${th('供应商', 'supplier')}
         ${th('改进措施', 'measures_count', 'text-right')}
         ${th('未达标维度', 'failing_dim_count', 'text-right')}
         ${th('综合完成率', 'overall_rate')}
       </tr></thead>
-      <tbody>${rows || '<tr><td colspan="7" class="text-center text-slate-400 py-8">暂无数据</td></tr>'}</tbody>
+      <tbody>${rows || '<tr><td colspan="8" class="text-center text-slate-400 py-8">暂无数据</td></tr>'}</tbody>
     </table>`;
 }
 
@@ -1195,12 +1941,22 @@ async function reloadIndicatorsForCurrentPeriod() {
     state.buildingIndicatorsData = await fetchBuildingIndicators(state.selectedBuildingId, state.currentPeriod);
     const data = state.buildingIndicatorsData;
     renderBuildingInfo(data, state.selectedBuildingId);
-    renderDimensionTabs(data.dimensions);
-    await renderBuildingMeasures();
-    await updateRadarChart(state.selectedBuildingId);
-    renderAssetModule(state.selectedBuildingId);
-    renderEnergyModule(state.selectedBuildingId);
-    renderCostModule();
+    // Render radar chart + portrait (static DOM, always visible)
+    updateRadarChart(state.selectedBuildingId);
+    // Pre-load measures data
+    try {
+      const measures = await fetchBuildingMeasures(state.selectedBuildingId);
+      state.buildingMeasuresAll = dedupeMeasures(measures || []);
+    } catch(e) {}
+    // Set up tab bar and render default overview tab
+    setupBldTabs();
+    renderBldTab('overview');
+    // Pre-compute other tab data in background
+    setTimeout(() => {
+      renderAssetModule(state.selectedBuildingId);
+      renderEnergyModule(state.selectedBuildingId);
+      renderCostModule();
+    }, 200);
   } catch (err) {
     console.error('loadBuildingView failed:', err);
     showToast('加载楼宇数据失败', 'error');
@@ -1213,9 +1969,13 @@ async function setupBuildingSelect(selectedId) {
   const buildings = await getBuildings();
   const selectedBld = buildings.find(b => b.id == selectedId);
 
+  // Back-fill filter bar to reflect opened building
+  syncFiltersToBuilding(selectedBld);
+
   function filterBuildings(query) {
     const q = query.toLowerCase().trim();
-    if (!q) return buildings.slice(0, 50);
+    // Empty → constrained by active filters; typed query → search ALL buildings
+    if (!q) return buildings.filter(buildingMatchesActiveFilters).slice(0, 50);
     return buildings.filter(b =>
       b.name.toLowerCase().includes(q) ||
       (b.city || '').toLowerCase().includes(q) ||
@@ -1233,7 +1993,7 @@ async function setupBuildingSelect(selectedId) {
       return;
     }
     dropdown.innerHTML = shown.map(b => `
-      <div class="building-option px-3 py-2 text-sm cursor-pointer border-b border-slate-50 last:border-0 hover:bg-indigo-50 ${b.id == selectedId ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-700'}"
+      <div class="building-option px-3 py-2 text-sm cursor-pointer border-b border-slate-50 last:border-0 hover:bg-blue-50 ${b.id == selectedId ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}"
            data-bid="${b.id}">
         <div>${b.name}</div>
         <div class="text-xs text-slate-400">${b.region} · ${b.city} · ${b.asset_type}</div>
@@ -1250,24 +2010,9 @@ async function setupBuildingSelect(selectedId) {
     });
   }
 
-  // Check if search wrap already exists
-  let wrap = document.getElementById('buildingSearchWrap');
-
-  if (!wrap) {
-    // First time: replace select with searchable input
-    const container = document.getElementById('buildingSelect');
-    if (!container) return;
-
-    const wrapHTML = `
-      <div class="relative" id="buildingSearchWrap" style="min-width:280px">
-        <input id="buildingSearchInput" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm w-full focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-100"
-               placeholder="搜索楼宇名称或城市..." autocomplete="off" />
-        <div id="buildingDropdown" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;max-height:260px;width:100%;overflow-y:auto;border-radius:12px;border:1px solid #e2e8f0;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,0.1);z-index:50"></div>
-      </div>`;
-    container.insertAdjacentHTML('afterend', wrapHTML);
-    container.remove();
-
-    // Set up input event listeners once
+  // Set up listeners once (sidebar search elements already exist in HTML)
+  if (!setupBuildingSelect._initialized) {
+    setupBuildingSelect._initialized = true;
     const input = document.getElementById('buildingSearchInput');
     if (input) {
       input.addEventListener('focus', () => {
@@ -1308,6 +2053,53 @@ async function setupBuildingSelect(selectedId) {
   }
   const dropdown = document.getElementById('buildingDropdown');
   if (dropdown) dropdown.style.display = 'none';
+
+  // Expose hook to re-render filter-constrained dropdown
+  setupBuildingSelect._renderFiltered = function() {
+    var inp = document.getElementById('buildingSearchInput');
+    renderDropdown(filterBuildings(inp ? inp.value : ''));
+  };
+
+  // ---- Top bar building search ----
+  const topInput = document.getElementById('buildingSelectSearch');
+  if (topInput) {
+    topInput.value = selectedBld ? `${selectedBld.name} (${selectedBld.region} · ${selectedBld.city})` : '';
+    if (!topInput._bound) {
+      topInput._bound = true;
+      const topDropdown = document.getElementById('buildingSelectDropdown');
+      const renderTop = (list) => {
+        if (!topDropdown) return;
+        const shown = list.slice(0, 50);
+        if (shown.length === 0) {
+          topDropdown.innerHTML = '<div class="px-3 py-2 text-xs text-slate-400">未找到匹配楼宇</div>';
+          topDropdown.style.display = 'block';
+          return;
+        }
+        topDropdown.innerHTML = shown.map(b => `
+          <div class="px-3 py-2 text-sm cursor-pointer border-b border-slate-50 last:border-0 hover:bg-blue-50 text-slate-700" data-bid="${b.id}">
+            <div>${b.name}</div>
+            <div class="text-xs text-slate-400">${b.region} · ${b.city} · ${b.asset_type}</div>
+          </div>`).join('');
+        topDropdown.querySelectorAll('div[data-bid]').forEach(opt => {
+          opt.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            const bid = parseInt(opt.dataset.bid);
+            if (topDropdown) topDropdown.style.display = 'none';
+            loadBuildingView(bid);
+          });
+        });
+        topDropdown.style.display = 'block';
+      };
+      topInput.addEventListener('focus', () => renderTop(filterBuildings(topInput.value)));
+      topInput.addEventListener('input', () => renderTop(filterBuildings(topInput.value)));
+      topInput.addEventListener('click', () => renderTop(filterBuildings(topInput.value)));
+      document.addEventListener('click', function hideTopDropdown(e) {
+        if (topDropdown && !topDropdown.contains(e.target) && e.target !== topInput) {
+          topDropdown.style.display = 'none';
+        }
+      });
+    }
+  }
 }
 
 async function renderBuildingInfo(data, buildingId) {
@@ -1322,6 +2114,7 @@ async function renderBuildingInfo(data, buildingId) {
   if (!b) return;
 
   $('#buildingBreadcrumb').textContent = `${b.region} > ${b.city} > ${b.district || ''}`;
+  state._cachedBuildingInfo = b; // Cache for space tab
 
   const editableFields = [
     { key: 'headcount', label: '工位数', type: 'number', fmt: v => v != null ? v : '未填写' },
@@ -1344,7 +2137,8 @@ async function renderBuildingInfo(data, buildingId) {
     <div class="flex items-center justify-between mb-3">
       <h3 class="text-lg font-semibold text-slate-800">${b.name}</h3>
       <div class="flex items-center gap-2">
-        <button onclick="saveBuildingInfo(${b.id})" class="rounded-xl bg-indigo-500 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-600 transition">保存信息</button>
+        <button onclick="addToCompare(${b.id})" class="rounded-xl border border-blue-200 bg-white px-2 py-1 text-xs text-blue-500 hover:bg-blue-50 transition" title="加入对比">⊕ 对比</button>
+        <button onclick="saveBuildingInfo(${b.id})" class="rounded-xl bg-blue-500 px-3 py-1 text-xs font-medium text-white hover:bg-blue-600 transition">保存信息</button>
         <span class="badge ${b.asset_type === '自持园区' ? 'badge-indigo' : 'badge-amber'}" style="background:${b.asset_type === '自持园区' ? 'rgba(111,123,178,0.12)' : 'rgba(199,166,122,0.15)'};color:${b.asset_type === '自持园区' ? '#41558b' : '#9a7541'}">${b.asset_type}</span>
       </div>
     </div>
@@ -1356,7 +2150,17 @@ async function renderBuildingInfo(data, buildingId) {
           <input class="building-editable rounded-lg border border-slate-200 px-1.5 py-0.5 text-sm text-slate-700 w-full mt-0.5 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-100"
                  data-field="${f.key}" type="${f.type}" value="${b[f.key] != null ? b[f.key] : ''}" placeholder="填写" />
         </div>`).join('')}
-    </div>`;
+    </div>
+    <div class="mt-3 flex items-center gap-2" id="bldTagContainer"></div>`;
+
+  // Render building tags + make edit fields obvious
+  setTimeout(() => {
+    renderBuildingTags(buildingId);
+    document.querySelectorAll('.building-editable').forEach(inp => {
+      inp.style.background = '#fafbfc';
+      inp.title = '可编辑，修改后点击"保存信息"';
+    });
+  }, 50);
 }
 
 async function saveBuildingInfo(buildingId) {
@@ -1601,12 +2405,519 @@ $('#btnSaveIndicators').addEventListener('click', async () => {
 });
 
 // ---- Radar Chart Update ----
+// ---- Building Tab System ----
+const BLD_TABS = {
+  overview: { name: '总览', dims: null },
+  safety: { name: '环境安全', dims: ['D15'] },
+  temperature: { name: '温度适宜', dims: ['D16'] },
+  lighting: { name: '照明亮堂', dims: ['D17'] },
+  air: { name: '空气清新', dims: ['D18'] },
+  energy: { name: '能效与设备', dims: ['D11','D14'] },
+  service: { name: '服务效率', dims: ['D12','D02'] },
+  space: { name: '空间与资产', dims: ['D01'] },
+  cost: { name: '成本分析', dims: null },
+  improve: { name: '改进计划', dims: null },
+  supplier: { name: '供应商', dims: null },
+};
+
+function setupBldTabs() {
+  if (setupBldTabs._done) return;
+  setupBldTabs._done = true;
+  const bar = document.getElementById('bldTabBar');
+  if (!bar) return;
+  bar.querySelectorAll('.bld-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      bar.querySelectorAll('.bld-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderBldTab(btn.dataset.bldtab);
+    });
+  });
+}
+
+function renderBldTab(tabKey) {
+  const container = document.getElementById('bldTabContent');
+  if (!container) return;
+  const data = state.buildingIndicatorsData;
+  if (!data) return;
+
+  const tab = BLD_TABS[tabKey];
+  if (!tab) return;
+
+  let html = '';
+
+  if (tabKey === 'overview') {
+    html = renderOverviewTab(data);
+  } else if (tabKey === 'improve') {
+    html = renderImproveTab();
+  } else if (tabKey === 'supplier') {
+    html = renderSupplierTab();
+  } else if (tabKey === 'cost') {
+    html = renderCostTabContent();
+  } else if (tabKey === 'space') {
+    html = renderSpaceTabContent();
+  } else if (tab.dims) {
+    html = renderDimensionTab(tabKey, tab.dims, data);
+  } else {
+    html = '<div class="content-card text-center py-12 text-slate-400">即将上线</div>';
+  }
+
+  container.innerHTML = html;
+  bindTabInteractions(tabKey);
+}
+
+function renderOverviewTab(data) {
+  const dims = data.dimensions || [];
+  const sorted = [...dims].sort((a, b) => (a.completion_rate || 0) - (b.completion_rate || 0));
+  const topRisks = sorted.slice(0, 3).filter(d => d.completion_rate < 100);
+  const topStrengths = [...dims].sort((a, b) => (b.completion_rate || 0) - (a.completion_rate || 0)).slice(0, 3);
+
+  let alerts = '';
+  if (topRisks.length > 0) {
+    alerts = topRisks.map((d, i) => {
+      const cls = d.completion_rate < 50 ? 'bld-alert-danger' : d.completion_rate < 80 ? 'bld-alert-warn' : 'bld-alert-info';
+      return `<div class="bld-alert-card ${cls}"><b>⚠ ${d.dimension_name}</b> 达标率 ${d.completion_rate}% — 需重点关注${d.completion_rate < 50 ? '，存在严重风险' : ''}</div>`;
+    }).join('');
+  } else {
+    alerts = '<div class="bld-alert-card bld-alert-info">✅ 所有维度均达标，保持当前管理节奏</div>';
+  }
+
+  // Dimension mini cards
+  const dimCards = dims.slice(0, 12).map(d => {
+    const rate = d.completion_rate || 0;
+    const color = rate >= 90 ? '#22c55e' : rate >= 70 ? '#f59e0b' : '#ef4444';
+    const bg = rate >= 90 ? '#f0fdf4' : rate >= 70 ? '#fffbeb' : '#fef2f2';
+    return `<div class="text-center p-2 rounded-xl cursor-pointer hover:shadow-sm transition" style="background:${bg}" onclick="switchBldTabForDim('${d.dimension_id}')" title="点击查看${d.dimension_name}详情">
+      <div class="text-lg font-bold" style="color:${color}">${rate}%</div>
+      <div class="text-[0.6rem] text-slate-500 mt-0.5">${d.dimension_name}</div>
+    </div>`;
+  }).join('');
+
+  return `
+    ${alerts ? `<div class="mb-4">${alerts}</div>` : ''}
+    <div class="content-card">
+      <div class="bld-section-title">📋 维度达标率概览</div>
+      <div class="grid grid-cols-6 gap-2">${dimCards}</div>
+      ${topStrengths.length > 0 ? `
+        <div class="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2">
+          <span class="text-xs text-slate-400">优势维度:</span>
+          ${topStrengths.map(d => `<span class="badge badge-green">${d.dimension_name} ${d.completion_rate}%</span>`).join(' ')}
+        </div>` : ''}
+    </div>`;
+}
+
+function renderDimensionTab(tabKey, dimIds, data) {
+  const measures = state.buildingMeasuresAll || [];
+  const linkedMeasures = measures.filter(m => {
+    const mDims = (m.dimension_ids || '').split(',').map(s => s.trim());
+    return dimIds.some(d => mDims.includes(d));
+  });
+
+  // Alerts
+  const dimData = (data.dimensions || []).filter(d => dimIds.includes(d.dimension_id));
+  const belowTarget = dimData.filter(d => (d.completion_rate || 0) < 80);
+  const alerts = belowTarget.map(d => {
+    const cls = d.completion_rate < 50 ? 'bld-alert-danger' : 'bld-alert-warn';
+    return `<div class="bld-alert-card ${cls}"><b>⚠ ${d.dimension_name}</b> — 达标率仅 ${d.completion_rate}%，${d.completion_rate < 50 ? '需立即采取行动' : '建议关注'}</div>`;
+  }).join('');
+
+  // Render editable indicator table
+  const indicators = (data.indicators || []).filter(ind => dimIds.includes(ind.dimension_id));
+  let indicatorRows = '';
+  if (indicators.length > 0) {
+    indicatorRows = indicators.map(ind => {
+      const rate = ind.completion_rate;
+      const prevRate = ind.prev_rate;
+      const actualVal = state.dirtyValues[ind.id] !== undefined ? state.dirtyValues[ind.id] : ind.actual_value;
+      const isDirty = state.dirtyValues[ind.id] !== undefined;
+      let statusCls = 'bld-status-pass';
+      if (rate == null) statusCls = 'bld-status-na';
+      else if (rate < 80) statusCls = 'bld-status-fail';
+      else if (rate < 100) statusCls = 'bld-status-warn';
+      const trend = prevRate != null && rate != null ? (rate > prevRate ? '↑' : rate < prevRate ? '↓' : '→') : '';
+      const trendColor = trend === '↑' ? '#22c55e' : trend === '↓' ? '#ef4444' : '#94a3b8';
+      const rateCls = rate != null ? (rate >= 100 ? 'badge-green' : rate >= 70 ? 'badge-amber' : 'badge-red') : 'badge-gray';
+      return `<tr class="${isDirty ? 'bg-amber-50/30' : ''}">
+        <td><span class="dim-color-bar" style="background:${DIM_COLORS[ind.dimension_id] || '#8d9aa8'}"></span>${ind.name}</td>
+        <td class="text-xs text-slate-400">${ind.target_value || '—'}</td>
+        <td><input class="ind-input ${isDirty ? 'ring-amber-300 border-amber-300' : ''}" data-ind="${ind.id}" data-target="${ind.target_value || ''}" data-target-type="${ind.target_type || ''}" type="number" step="any" value="${actualVal != null ? actualVal : ''}" placeholder="填写" style="width:80px" /></td>
+        <td><span class="badge ${rateCls}" data-rate-cell="${ind.id}">${rate != null ? rate + '%' : '—'}</span></td>
+        <td style="color:${trendColor};font-size:0.7rem">${trend}</td>
+        <td class="text-xs text-slate-400">${ind.definition || ''}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Linked measures
+  let measuresHtml = '';
+  if (linkedMeasures.length > 0) {
+    measuresHtml = linkedMeasures.slice(0, 10).map(m => `
+      <tr>
+        <td class="text-xs">${m.name || '-'}</td>
+        <td><span class="badge ${m.status === '已完成' ? 'badge-green' : m.status === '进行中' ? 'badge-blue' : m.status === '超期' ? 'badge-red' : 'badge-gray'}">${m.status}</span></td>
+        <td class="text-xs text-slate-400">${m.completion_phase || '-'}</td>
+        <td class="text-xs">${m.budget ? '¥'+(m.budget/10000).toFixed(1)+'万' : '-'}</td>
+      </tr>`).join('');
+  } else {
+    measuresHtml = '<tr><td colspan="4" class="text-xs text-slate-400 py-4 text-center">暂无关联改进措施</td></tr>';
+  }
+
+  return `
+    ${alerts ? `<div class="mb-4">${alerts}</div>` : ''}
+    <div class="content-card" id="dimTabCard-${tabKey}">
+      <div class="flex items-center justify-between mb-3">
+        <div class="bld-section-title" style="margin:0;padding:0;border:none">📋 指标状态 <span class="text-xs text-slate-400 font-normal">(可直接编辑实际值)</span></div>
+        <div class="flex items-center gap-2">
+          <span id="dimSaveStatus-${tabKey}" class="text-xs text-slate-400 hidden">已保存</span>
+          <button id="btnDimSave-${tabKey}" class="rounded-lg bg-blue-500 hover:bg-blue-600 px-3 py-1 text-xs font-medium text-white transition">保存</button>
+        </div>
+      </div>
+      ${indicatorRows ? `
+        <div class="frozen-pane" style="max-height:400px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:12px">
+        <table class="data-table">
+          <thead><tr><th>指标名称</th><th>目标值</th><th>实际值</th><th>完成率</th><th>趋势</th><th>说明</th></tr></thead>
+          <tbody>${indicatorRows}</tbody></table></div>` : '<p class="text-sm text-slate-400 py-4">暂无指标数据</p>'}
+    </div>
+    <div class="content-card mt-4">
+      <div class="bld-section-title">🔧 关联改进措施 <span class="text-xs text-slate-400 font-normal">(${linkedMeasures.length} 条)</span></div>
+      <div class="frozen-pane" style="max-height:300px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:12px">
+      <table class="data-table">
+        <thead><tr><th>措施名称</th><th>状态</th><th>阶段</th><th>预算</th></tr></thead>
+        <tbody>${measuresHtml}</tbody></table></div>
+    </div>`;
+}
+
+// Bind edit handlers for dimension tab indicator inputs
+function bindDimTabEdits(tabKey) {
+  const card = document.getElementById(`dimTabCard-${tabKey}`);
+  if (!card) return;
+
+  card.querySelectorAll('.ind-input').forEach(input => {
+    if (input.dataset.bound) return; // already bound
+    input.dataset.bound = '1';
+    const indId = input.dataset.ind;
+
+    input.addEventListener('input', () => {
+      const val = input.value.trim();
+      const numVal = val === '' ? null : parseFloat(val);
+      state.dirtyValues[indId] = numVal;
+      input.classList.add('ring-amber-300', 'border-amber-300');
+      const row = input.closest('tr');
+      if (row) row.classList.add('bg-amber-50/30');
+      // Live rate preview
+      const rateCell = card.querySelector(`[data-rate-cell="${indId}"]`);
+      if (rateCell) {
+        const previewRate = calcPreviewRate(numVal, input.dataset.target || '', input.dataset.targetType || '');
+        if (previewRate != null) {
+          const cls = previewRate >= 100 ? 'badge-green' : previewRate >= 70 ? 'badge-amber' : 'badge-red';
+          rateCell.className = `badge ${cls}`;
+          rateCell.textContent = previewRate + '%';
+        }
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    });
+
+    input.addEventListener('blur', async () => {
+      const val = input.value.trim();
+      const actualValue = val === '' ? null : parseFloat(val);
+      state.dirtyValues[indId] = actualValue;
+      if (state.dirtyValues[indId] !== undefined) {
+        try {
+          await saveBuildingIndicators(state.selectedBuildingId, state.currentPeriod, [
+            { indicator_id: indId, actual_value: actualValue, notes: '' }
+          ]);
+          delete state.dirtyValues[indId];
+          input.classList.remove('ring-amber-300', 'border-amber-300');
+          const row = input.closest('tr');
+          if (row) row.classList.remove('bg-amber-50/30');
+          // Reload data
+          state.buildingIndicatorsData = await fetchBuildingIndicators(state.selectedBuildingId, state.currentPeriod);
+          const updatedInd = (state.buildingIndicatorsData.indicators || []).find(i => i.id === indId);
+          if (updatedInd) {
+            const rate = updatedInd.completion_rate;
+            const rateCell = card.querySelector(`[data-rate-cell="${indId}"]`);
+            if (rateCell) {
+              const cls = rate != null ? (rate >= 100 ? 'badge-green' : rate >= 70 ? 'badge-amber' : 'badge-red') : 'badge-gray';
+              rateCell.className = `badge ${cls}`;
+              rateCell.textContent = rate != null ? rate + '%' : '—';
+            }
+          }
+        } catch(e) { console.error('Auto-save failed:', e); }
+      }
+    });
+  });
+
+  // Save button handler
+  const saveBtn = document.getElementById(`btnDimSave-${tabKey}`);
+  const statusEl = document.getElementById(`dimSaveStatus-${tabKey}`);
+  if (saveBtn) {
+    saveBtn.onclick = async () => {
+      const dirtyInputs = [...card.querySelectorAll('.ind-input')].filter(inp => state.dirtyValues[inp.dataset.ind] !== undefined);
+      if (dirtyInputs.length === 0) { showToast('没有需要保存的修改', 'error'); return; }
+      const values = dirtyInputs.map(inp => ({
+        indicator_id: inp.dataset.ind,
+        actual_value: state.dirtyValues[inp.dataset.ind],
+        notes: ''
+      }));
+      try {
+        await saveBuildingIndicators(state.selectedBuildingId, state.currentPeriod, values);
+        values.forEach(v => { delete state.dirtyValues[v.indicator_id]; });
+        dirtyInputs.forEach(inp => {
+          inp.classList.remove('ring-amber-300', 'border-amber-300');
+          const row = inp.closest('tr');
+          if (row) row.classList.remove('bg-amber-50/30');
+        });
+        if (statusEl) { statusEl.classList.remove('hidden'); setTimeout(() => statusEl.classList.add('hidden'), 2000); }
+        showToast('指标已保存', 'success');
+        // Reload full data
+        state.buildingIndicatorsData = await fetchBuildingIndicators(state.selectedBuildingId, state.currentPeriod);
+        // Re-render tab with fresh data
+        renderBldTab(tabKey);
+      } catch(e) { showToast('保存失败: ' + e.message, 'error'); }
+    };
+  }
+}
+
+function renderImproveTab() {
+  // Render full measures table synchronously to avoid flicker
+  const measures = state.buildingMeasuresAll || [];
+  const filter = state.buildingMeasureFilter || { dim: '', phase: '', initiator: '' };
+  let filtered = [...measures];
+  if (filter.dim) filtered = filtered.filter(m => (m.dimension_ids || '').split(',').map(s => s.trim()).includes(filter.dim));
+  if (filter.phase) filtered = filtered.filter(m => m.completion_phase === filter.phase);
+  if (filter.initiator) filtered = filtered.filter(m => (m.initiator || '字节') === filter.initiator);
+  filtered.sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
+  const totalBudget = filtered.reduce((s, m) => s + (m.budget || 0), 0);
+  const totalBld = filtered.reduce((s, m) => s + (m.total_bld || 0), 0);
+  const dimOpts = Object.entries(state.dimNameMap).map(([id, name]) => `<option value="${id}" ${filter.dim === id ? 'selected' : ''}>${name}</option>`).join('');
+  const phases = ['3个月内', '6个月内', '1年内', '1年以上'];
+
+  return `<div class="content-card">
+    <div class="flex items-center gap-3 mb-3 flex-wrap">
+      <button id="btnShowMeasureForm" class="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-medium text-blue-500 hover:bg-blue-50 transition">+ 新建措施</button>
+      <span class="text-xs text-slate-400">筛选:</span>
+      <select id="bldMeasureDimFilter" class="rounded-lg border-slate-200 bg-white text-xs px-2 py-1"><option value="">全部维度</option>${dimOpts}</select>
+      <select id="bldMeasurePhaseFilter" class="rounded-lg border-slate-200 bg-white text-xs px-2 py-1"><option value="">全部阶段</option>${phases.map(p => `<option value="${p}" ${filter.phase === p ? 'selected' : ''}>${p}</option>`).join('')}</select>
+      <select id="bldMeasureInitiatorFilter" class="rounded-lg border-slate-200 bg-white text-xs px-2 py-1"><option value="">全部发起方</option><option value="字节" ${filter.initiator==='字节'?'selected':''}>字节</option><option value="供应商" ${filter.initiator==='供应商'?'selected':''}>供应商</option></select>
+      ${totalBudget > 0 ? `<span class="text-xs text-slate-500">总预算: <b class="text-slate-700">¥${(totalBudget/10000).toFixed(1)}万</b></span>` : ''}
+      <span class="text-xs text-slate-400">${filtered.length} 条</span>
+      <button id="btnGanttView" class="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500 hover:bg-slate-50 transition">📊 甘特图</button>
+      <button id="btnEffectValidation" class="rounded-lg border border-blue-200 bg-white px-3 py-1 text-xs text-blue-500 hover:bg-blue-50 transition">📈 效果验证</button>
+      <button id="btnExportBldMeasures" class="ml-auto rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500 hover:bg-slate-50 transition">导出 CSV</button>
+    </div>
+    <div id="effectValidationSection" class="hidden mt-3 p-4 bg-blue-50/30 rounded-xl border border-blue-100"></div>
+    <div id="buildingMeasures">${filtered.length === 0
+      ? '<p class="text-sm text-slate-400 py-4 text-center">暂无匹配措施</p>'
+      : '<table class="data-table"><thead><tr><th>措施</th><th>关联维度</th><th>发起方</th><th>计划完成</th><th>预算</th><th>判断标准</th><th>状态</th></tr></thead><tbody>' +
+      filtered.map(m => {
+        let deadlineHtml = '-';
+        if (m.planned_end_date) {
+          const today = new Date(); today.setHours(0,0,0,0);
+          const planDate = new Date(m.planned_end_date);
+          const diffDays = Math.ceil((planDate - today) / (1000 * 60 * 60 * 24));
+          if (m.status === '已完成') {
+            deadlineHtml = '<span class="text-xs text-slate-400">' + m.planned_end_date + '</span>';
+          } else if (diffDays < 0) {
+            deadlineHtml = '<span class="text-xs font-semibold text-red-600">超期 ' + Math.abs(diffDays) + ' 天</span>';
+          } else if (diffDays <= 7) {
+            deadlineHtml = '<span class="text-xs font-semibold text-amber-600">' + diffDays + ' 天后到期</span>';
+          } else {
+            deadlineHtml = '<span class="text-xs text-slate-500">' + m.planned_end_date + '</span>';
+          }
+        }
+        return '<tr>' +
+        '<td class="text-xs font-medium max-w-[200px]" title="' + (m.description || '').replace(/"/g, '&quot;') + '">' + (m.name || '-') + '</td>' +
+        '<td class="text-xs"><span class="badge" style="' + dimBadgeStyle(m.dimension_ids) + '">' + dimIdToName(m.dimension_ids) + '</span></td>' +
+        '<td class="text-xs"><span class="badge ' + (m.initiator === '供应商' ? 'badge-amber' : 'badge-blue') + '">' + (m.initiator || '字节') + '</span></td>' +
+        '<td>' + deadlineHtml + '</td>' +
+        '<td class="text-xs">' + (m.budget != null ? '¥' + (m.budget/10000).toFixed(1) + '万' : '-') + '</td>' +
+        '<td class="text-xs max-w-[100px]">' + (m.expected_effect || '-') + '</td>' +
+        '<td><select class="measure-status-select rounded-lg border-slate-200 text-xs px-1 py-0.5" data-mid="' + m.id + '" data-bid="' + m.building_id + '">' +
+          '<option value="未开始" ' + (m.status==='未开始'?'selected':'') + '>未开始</option>' +
+          '<option value="进行中" ' + (m.status==='进行中'?'selected':'') + '>进行中</option>' +
+          '<option value="已完成" ' + (m.status==='已完成'?'selected':'') + '>已完成</option>' +
+          '<option value="超期" ' + (m.status==='超期'?'selected':'') + '>超期</option></select></td>' +
+      '</tr>'; }).join('') + '</tbody></table>'}</div>
+  </div>`;
+}
+
+function renderCostTabContent() {
+  const measures = state.buildingMeasuresAll || [];
+  const mBudget = measures.reduce((s, m) => s + (m.budget || 0), 0);
+  const hasBudget = mBudget > 0;
+  const byDim = {};
+  measures.forEach(m => { const d = m.dimension_ids || '其他'; if (!byDim[d]) byDim[d] = 0; byDim[d] += (m.budget || 0); });
+  // Filter dimensions that have budget
+  const dimEntries = Object.entries(byDim).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]).slice(0, 8);
+
+  return `<div class="content-card"><div class="bld-section-title">💰 费用概览</div>
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      <div class="rounded-xl bg-slate-50 p-3"><div class="text-slate-400 text-xs">改进总预算</div><div class="text-lg font-bold">${hasBudget ? '¥'+(mBudget/10000).toFixed(1)+'万' : '—'}</div></div>
+      <div class="rounded-xl bg-slate-50 p-3"><div class="text-slate-400 text-xs">措施数</div><div class="text-lg font-bold">${measures.length}</div></div>
+      <div class="rounded-xl bg-slate-50 p-3"><div class="text-slate-400 text-xs">平均单价</div><div class="text-lg font-bold">${measures.length>0 && hasBudget ? '¥'+(mBudget/measures.length/10000).toFixed(2)+'万' : '—'}</div></div>
+    </div>
+    <div class="bld-section-title">📋 按维度分布</div>
+    ${dimEntries.length === 0 ? '<p class=\"text-xs text-slate-400 py-2\">暂无费用数据</p>' : `<div class=\"space-y-1\">${dimEntries.map(([dim, budget]) => {
+      const pct = (budget/mBudget*100);
+      return `<div class=\"flex items-center gap-2 text-xs\"><span class=\"w-20 text-slate-500 truncate\">${dimIdToName(dim)}</span>
+        <div class=\"flex-1 h-3 rounded-full bg-slate-100\"><div class=\"h-full rounded-full bg-blue-400\" style=\"width:${pct}%\"></div></div>
+        <span class=\"w-12 text-right\">${pct.toFixed(0)}%</span></div>`;
+    }).join('')}</div>`}</div>`;
+}
+
+function renderSpaceTabContent() {
+  const b = state._cachedBuildingInfo;
+  if (!b) return '<div class="content-card"><p class="text-sm text-slate-400 py-4 text-center">加载建筑信息中…</p></div>';
+  return `<div class="content-card"><div class="bld-section-title">🏢 空间与资产</div>
+    <div class="grid grid-cols-2 gap-2 text-xs">${[
+      { label: '资产性质', value: b.asset_type || '未填写' },
+      { label: '工位数', value: b.headcount != null ? b.headcount : '未填写' },
+      { label: '面积(㎡)', value: b.area_sqm != null ? b.area_sqm.toLocaleString() : '未填写' },
+      { label: '层数', value: b.floors != null ? b.floors : '未填写' },
+      { label: '楼龄(年)', value: b.building_age != null ? b.building_age : '未填写' },
+      { label: '门禁数', value: b.access_gates != null ? b.access_gates : '未填写' },
+      { label: '供应商', value: b.supplier || '未填写' },
+      { label: '业务线', value: b.business_lines || '未填写' },
+    ].map(f => `<div class="rounded-xl border border-slate-100 bg-white/50 p-2.5">
+      <div class="text-slate-400">${f.label}</div>
+      <div class="font-semibold mt-0.5 ${f.value==='未填写'?'text-slate-300':'text-slate-700'}">${f.value}</div>
+    </div>`).join('')}</div></div>`;
+}
+
+function bindTabInteractions(tabKey) {
+  if (tabKey === 'improve') {
+    bindImproveTabHandlers();
+  } else if (tabKey === 'cost') {
+    // Cost tab is fully rendered synchronously, no extra binding needed
+  } else if (tabKey === 'space') {
+    // Space tab is fully rendered synchronously, no extra binding needed
+  } else if (BLD_TABS[tabKey] && BLD_TABS[tabKey].dims) {
+    setTimeout(() => bindDimTabEdits(tabKey), 50);
+  }
+}
+
+function renderSupplierTab() {
+  const b = state._cachedBuildingInfo;
+  const supplier = b ? b.supplier : null;
+  if (!supplier) return '<div class="content-card text-center py-12 text-slate-400">该楼宇未关联供应商</div>';
+
+  // Get supplier stats from vendor data if available
+  const measures = state.buildingMeasuresAll || [];
+  const sMeasures = measures.length;
+  const sBudget = measures.reduce((s, m) => s + (m.budget || 0), 0);
+
+  return `<div class="content-card">
+    <div class="bld-section-title">🏢 供应商信息</div>
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      <div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-400">供应商名称</div><div class="text-lg font-bold text-slate-800">${supplier}</div></div>
+      <div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-400">覆盖楼宇</div><div class="text-lg font-bold text-slate-800">${(state.vendorData?.suppliers||[]).find(v => v.supplier === supplier)?.building_count || '...'} 栋</div></div>
+      <div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-400">改进措施/预算</div><div class="text-lg font-bold text-slate-800">${sMeasures} 条 / ¥${(sBudget/10000).toFixed(1)}万</div></div>
+    </div>
+    <div class="flex items-center gap-4">
+      <a onclick="window.showVendorDetail('${supplier}');document.querySelectorAll('.sidebar-nav').forEach(b=>b.classList.remove('active'));document.querySelector('[data-view=vendor]').classList.add('active');" class="text-sm text-blue-500 hover:text-blue-600 cursor-pointer">查看供应商详情 →</a>
+      <span class="text-xs text-slate-400">跳转至供应商管理页面</span>
+    </div>
+  </div>`;
+}
+
+function bindImproveTabHandlers() {
+  // Measure form toggle
+  const addBtn = document.getElementById('btnShowMeasureForm');
+  if (addBtn && !addBtn._bound) {
+    addBtn._bound = true;
+    addBtn.addEventListener('click', () => {
+      const form = document.getElementById('measureAddForm');
+      if (form) { form.remove(); return; }
+      addBtn.insertAdjacentHTML('afterend', measureFormHtml());
+      bindMeasureFormSubmit();
+    });
+  }
+  // Status change handlers
+  document.querySelectorAll('.measure-status-select').forEach(sel => {
+    if (sel._bound) return;
+    sel._bound = true;
+    sel.addEventListener('change', async () => {
+      try {
+        await updateMeasure(sel.dataset.bid, sel.dataset.mid, { status: sel.value });
+        showToast('状态已更新', 'success');
+      } catch (e) { showToast('更新失败', 'error'); }
+    });
+  });
+  // Filter handlers
+  const dimFilter = document.getElementById('bldMeasureDimFilter');
+  const phaseFilter = document.getElementById('bldMeasurePhaseFilter');
+  if (dimFilter && !dimFilter._bound) {
+    dimFilter._bound = true;
+    dimFilter.addEventListener('change', () => {
+      state.buildingMeasureFilter.dim = dimFilter.value;
+      renderBuildingMeasuresView();
+    });
+  }
+  if (phaseFilter && !phaseFilter._bound) {
+    phaseFilter._bound = true;
+    phaseFilter.addEventListener('change', () => {
+      state.buildingMeasureFilter.phase = phaseFilter.value;
+      renderBuildingMeasuresView();
+    });
+  }
+  const initiatorFilter = document.getElementById('bldMeasureInitiatorFilter');
+  if (initiatorFilter && !initiatorFilter._bound) {
+    initiatorFilter._bound = true;
+    initiatorFilter.addEventListener('change', () => {
+      if (!state.buildingMeasureFilter) state.buildingMeasureFilter = { dim: '', phase: '', initiator: '' };
+      state.buildingMeasureFilter.initiator = initiatorFilter.value;
+      renderBuildingMeasuresView();
+    });
+  }
+  // Export button
+  const exportBtn = document.getElementById('btnExportBldMeasures');
+  if (exportBtn && !exportBtn._bound) {
+    exportBtn._bound = true;
+    exportBtn.addEventListener('click', () => exportBuildingCSV());
+  }
+  // Gantt button
+  const ganttBtn = document.getElementById('btnGanttView');
+  if (ganttBtn && !ganttBtn._bound) {
+    ganttBtn._bound = true;
+    ganttBtn.addEventListener('click', () => toggleBldMeasuresGantt());
+  }
+  // Effect validation button
+  const effectBtn = document.getElementById('btnEffectValidation');
+  if (effectBtn && !effectBtn._bound) {
+    effectBtn._bound = true;
+    effectBtn.addEventListener('click', () => toggleEffectValidation());
+  }
+}
+
+// Global function to switch tab by dimension ID
+window.switchBldTabForDim = function(dimId) {
+  for (const [key, tab] of Object.entries(BLD_TABS)) {
+    if (tab.dims && tab.dims.includes(dimId)) {
+      const bar = document.getElementById('bldTabBar');
+      if (bar) {
+        bar.querySelectorAll('.bld-tab').forEach(b => b.classList.remove('active'));
+        const target = bar.querySelector(`[data-bldtab="${key}"]`);
+        if (target) target.classList.add('active');
+      }
+      renderBldTab(key);
+      return;
+    }
+  }
+};
+
+// ---- Radar Chart ----
 async function updateRadarChart(buildingId) {
   try {
-    const h1Data = await fetchBuildingIndicators(buildingId, 'H1_2026');
+    // Use cached H1 data if available, otherwise fetch
+    const h1Data = state.buildingIndicatorsData || await fetchBuildingIndicators(buildingId, 'H1_2026');
     const h2Data = await fetchBuildingIndicators(buildingId, 'H2_2025');
     state.radarData = { h1: h1Data, h2: h2Data };
-    renderRadarChart('chartRadar', h1Data.dimensions, h2Data.dimensions);
+    const dom = document.getElementById('chartRadar');
+    if (dom) {
+      renderRadarChart('chartRadar', h1Data.dimensions, h2Data.dimensions);
+    }
   } catch (err) {
     console.error('Radar chart load failed:', err);
     state.radarData = null;
@@ -1767,7 +3078,7 @@ function measureFormHtml() {
     `<option value="${id}">${name}</option>`
   ).join('');
   return `
-    <div id="measureAddForm" class="mb-4 rounded-2xl border border-indigo-200/60 bg-indigo-50/50 p-4">
+    <div id="measureAddForm" class="mb-4 rounded-2xl border border-blue-200/60 bg-blue-50/50 p-4">
       <div class="grid grid-cols-3 gap-3 mb-3">
         <div>
           <label class="block text-xs text-slate-500 mb-1">措施名称 <span class="text-red-400">*</span></label>
@@ -1776,6 +3087,17 @@ function measureFormHtml() {
         <div>
           <label class="block text-xs text-slate-500 mb-1">关联维度</label>
           <select id="mfDim" class="w-full rounded-lg border-slate-200 text-xs px-2 py-1.5">${dimOpts}</select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">发起方</label>
+          <select id="mfInitiator" class="w-full rounded-lg border-slate-200 text-xs px-2 py-1.5">
+            <option value="字节">字节</option>
+            <option value="供应商">供应商</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">负责人</label>
+          <input id="mfAssignee" class="w-full rounded-lg border-slate-200 text-xs px-2 py-1.5" placeholder="指派负责人">
         </div>
         <div>
           <label class="block text-xs text-slate-500 mb-1">完成阶段</label>
@@ -1792,11 +3114,15 @@ function measureFormHtml() {
           <input id="mfBudget" type="number" class="w-full rounded-lg border-slate-200 text-xs px-2 py-1.5" placeholder="例: 75000">
         </div>
         <div>
+          <label class="block text-xs text-slate-500 mb-1">计划完成日期</label>
+          <input id="mfPlanDate" type="date" class="w-full rounded-lg border-slate-200 text-xs px-2 py-1.5">
+        </div>
+        <div>
           <label class="block text-xs text-slate-500 mb-1">判断标准</label>
           <input id="mfEffect" class="w-full rounded-lg border-slate-200 text-xs px-2 py-1.5" placeholder="描述判断标准">
         </div>
         <div class="flex items-end gap-2">
-          <button id="btnSubmitMeasure" class="rounded-lg bg-indigo-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-indigo-600 transition">提交</button>
+          <button id="btnSubmitMeasure" class="rounded-lg bg-blue-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-600 transition">提交</button>
           <button id="btnCancelMeasure" class="rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-xs text-slate-500 hover:bg-slate-50 transition">取消</button>
         </div>
       </div>
@@ -1804,23 +3130,31 @@ function measureFormHtml() {
 }
 
 async function renderBuildingMeasures() {
-  const container = $('#buildingMeasures');
   try {
     const measures = await fetchBuildingMeasures(state.selectedBuildingId);
-
-    // Store for filtering
     state.buildingMeasuresAll = dedupeMeasures(measures || []);
     state.buildingMeasureFilter = { dim: '', phase: '' };
-
     renderBuildingMeasuresView();
   } catch (err) {
     console.error('Measures load failed:', err);
-    container.innerHTML = '<p class="text-sm text-slate-400 py-4 text-center">改进方案数据加载失败</p>';
+    const container = $('#buildingMeasures');
+    if (container) container.innerHTML = '<p class="text-sm text-slate-400 py-4 text-center">改进方案数据加载失败</p>';
   }
 }
 
 function renderBuildingMeasuresView() {
+  // Re-render the improve tab synchronously
+  const tabContent = document.getElementById('bldTabContent');
+  const activeTab = document.querySelector('.bld-tab.active');
+  if (tabContent && activeTab && activeTab.dataset.bldtab === 'improve') {
+    tabContent.innerHTML = renderImproveTab();
+    bindImproveTabHandlers();
+  }
+  return;
+}
+/* old direct-DOM code below is dead but kept for reference
   const container = $('#buildingMeasures');
+  if (!container) return; // Not on improve tab — silently skip
   let measures = [...(state.buildingMeasuresAll || [])];
   const filter = state.buildingMeasureFilter || { dim: '', phase: '' };
 
@@ -1862,6 +3196,7 @@ function renderBuildingMeasuresView() {
         ${phases.map(p => `<option value="${p}" ${filter.phase === p ? 'selected' : ''}>${p}</option>`).join('')}
       </select>
       ${budgetSummary}
+      <button id="btnGanttView" class="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500 hover:bg-slate-50 transition" onclick="toggleBldMeasuresGantt()">📊 甘特图</button>
       <button id="btnExportBldMeasures" class="ml-auto rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500 hover:bg-slate-50 transition">导出 CSV</button>
     </div>`;
 
@@ -1960,6 +3295,7 @@ function renderBuildingMeasuresView() {
     });
   }
 }
+*/
 
 function bindMeasureFormSubmit() {
   $('#btnSubmitMeasure').addEventListener('click', async () => {
@@ -1971,7 +3307,10 @@ function bindMeasureFormSubmit() {
       dimension_ids: $('#mfDim').value || null,
       completion_phase: $('#mfPhase').value || null,
       budget: $('#mfBudget').value ? parseFloat($('#mfBudget').value) : null,
-      expected_effect: $('#mfEffect').value.trim() || null
+      expected_effect: $('#mfEffect').value.trim() || null,
+      assignee: $('#mfAssignee').value.trim() || null,
+      initiator: $('#mfInitiator').value || '字节',
+      planned_end_date: $('#mfPlanDate').value || null
     };
     try {
       await createMeasure(data);
@@ -2228,6 +3567,350 @@ window.drillKey4Dim = function(dimId, dimName) {
       showDimDrillDown(dimId, dimName);
     });
   }
+};
+
+// ---- Dimension Detail View (National Perspective) ----
+const DIM_CONFIG = {
+  D15: { name: '环境安全', icon: '🛡️' },
+  D16: { name: '温度适宜', icon: '🌡️' },
+  D17: { name: '照明亮堂', icon: '💡' },
+  D18: { name: '空气清新', icon: '🌬️' }
+};
+
+// Dimension code moved to dimension.js
+// (orphaned code cleaned up)
+// (empty - dimension code in dimension.js)
+// ---- Vendor Management ----
+async function loadVendorView() {
+  const panel = $('#viewVendor');
+  showLoading(panel);
+  try {
+    const data = await apiGet('/api/vendors');
+    state.vendorData = data;
+    // Each render is independently error-safe
+    try { renderVendorKpiCards(data); } catch(e) { console.error('KPI cards:', e); }
+    try { renderVendorShareChart(data); } catch(e) { console.error('Share chart:', e); }
+    // 供应商KPI排名: 待开发 (renderVendorRankChart kept for future use)
+    try { renderVendorDetailTable(data); } catch(e) { console.error('Detail table:', e); }
+    try { renderVendorMeasuresTable(data); } catch(e) { console.error('Measures table:', e); }
+    try { renderVendorDimMatrix(data); } catch(e) { console.error('Dim matrix:', e); }
+    try { renderVendorRadarCompare(data); } catch(e) { console.error('Vendor radar:', e); }
+    // Show overview, hide detail
+    $('#vendorOverviewWrap').style.display = '';
+    $('#vendorSingleView').classList.add('hidden');
+  } catch (err) {
+    console.error('Vendor load failed:', err);
+    showToast('加载供应商数据失败: ' + err.message, 'error');
+  } finally {
+    hideLoading(panel);
+  }
+}
+
+function renderVendorKpiCards(data) {
+  const container = $('#vendorKpiCards');
+  const suppliers = data.suppliers || [];
+  const totalBlds = suppliers.reduce((s, v) => s + v.building_count, 0);
+  const measures = data.measures || [];
+  const totalMeasures = measures.reduce((s, m) => s + m.cnt, 0);
+  const totalBudget = measures.reduce((s, m) => s + (m.total_budget || 0), 0);
+  const cards = [
+    { label: '供应商总数', value: suppliers.length, sub: '' },
+    { label: '覆盖楼宇', value: totalBlds, sub: `最高 ${suppliers[0]?.building_count || 0} 栋` },
+    { label: '改进措施总数', value: totalMeasures, sub: `总预算 ¥${(totalBudget/10000).toFixed(0)}万` },
+    { label: '集中度 CR3', value: (suppliers.slice(0,3).reduce((s,v)=>s+v.building_count,0)/totalBlds*100).toFixed(0)+'%', sub: suppliers.slice(0,3).map(v=>v.supplier).join('/') },
+  ];
+  container.innerHTML = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-value">${c.value}</div>
+      <div class="kpi-label">${c.label}</div>
+      ${c.sub?`<div class="kpi-sub">${c.sub}</div>`:''}
+    </div>`).join('');
+}
+
+function renderVendorShareChart(data) {
+  const dom = document.getElementById('chartVendorShare');
+  if (!dom || dom.clientWidth === 0) return;
+  if (typeof getOrCreateChart !== 'function') return;
+  const chart = getOrCreateChart('chartVendorShare');
+  if (!chart) return;
+  const suppliers = data.suppliers || [];
+  chart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c} 栋 ({d}%)' },
+    series: [{
+      type: 'pie', radius: ['45%', '75%'], center: ['50%', '55%'],
+      label: { formatter: '{b}\n{d}%', fontSize: 10 },
+      data: suppliers.map(v => ({ name: v.supplier, value: v.building_count })),
+      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.1)' } }
+    }]
+  });
+}
+
+function renderVendorRankChart(data) {
+  const dom = document.getElementById('chartVendorRank');
+  if (!dom || dom.clientWidth === 0) return;
+  if (typeof getOrCreateChart !== 'function') return;
+  const chart = getOrCreateChart('chartVendorRank');
+  if (!chart) return;
+  const suppliers = data.suppliers || [];
+  // Compute KPI scores from rates
+  const rates = data.rates || [];
+  const rateMap = {};
+  rates.forEach(r => { if (!rateMap[r.supplier]) rateMap[r.supplier] = []; rateMap[r.supplier].push(r.avg_val); });
+  const scores = suppliers.map(v => {
+    const vals = rateMap[v.supplier] || [];
+    const avg = vals.length > 0 ? vals.reduce((s,x)=>s+x,0)/vals.length : 0;
+    return { name: v.supplier, score: Math.round(avg) };
+  }).sort((a,b) => b.score - a.score);
+  chart.setOption({
+    tooltip: {},
+    grid: { left: 90, right: 40, top: 10, bottom: 20 },
+    xAxis: { type: 'value', max: 100, axisLabel: { formatter: '{value}%', fontSize: 10 } },
+    yAxis: { type: 'category', data: scores.map(s => s.name).reverse(), axisLabel: { fontSize: 10, color: '#64748b' } },
+    series: [{
+      type: 'bar', data: scores.map(s => s.score).reverse(),
+      label: { show: true, position: 'right', formatter: '{c}%', fontSize: 10 },
+      itemStyle: {
+        borderRadius: [0, 6, 6, 0],
+        color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
+          colorStops: [{ offset: 0, color: '#3b82f6' }, { offset: 1, color: '#93c5fd' }] }
+      }
+    }]
+  });
+}
+
+function renderVendorDetailTable(data) {
+  const container = $('#vendorDetailTable');
+  const suppliers = data.suppliers || [];
+  const measures = data.measures || [];
+  // Aggregate measures by supplier
+  const mMap = {};
+  measures.forEach(m => {
+    if (!mMap[m.supplier]) mMap[m.supplier] = { total: 0, done: 0, budget: 0 };
+    mMap[m.supplier].total += m.cnt;
+    if (m.status === '已完成') mMap[m.supplier].done += m.cnt;
+    mMap[m.supplier].budget += (m.total_budget || 0);
+  });
+  container.innerHTML = `<table class="data-table">
+    <thead><tr><th>供应商</th><th>覆盖楼宇</th><th>区域数</th><th>自持/租赁</th><th>改进措施</th><th>已完成</th><th>预算总额</th><th>操作</th></tr></thead>
+    <tbody>${suppliers.map((v, i) => {
+      const mm = mMap[v.supplier] || { total: 0, done: 0, budget: 0 };
+      return `<tr>
+        <td><a onclick="window.showVendorDetail('${v.supplier}')" class="font-medium">${v.supplier}</a></td>
+        <td>${v.building_count} 栋</td>
+        <td>${v.regions_covered}</td>
+        <td>${v.self_owned}/${v.leased}</td>
+        <td>${mm.total}</td>
+        <td>${mm.done}</td>
+        <td>${mm.budget > 0 ? '¥'+(mm.budget/10000).toFixed(1)+'万' : '-'}</td>
+        <td><button onclick="window.showVendorDetail('${v.supplier}')" class="text-xs text-blue-500 hover:underline">查看详情 →</button></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+function renderVendorDimMatrix(data) {
+  const container = $('#vendorDimMatrix');
+  if (!container) return;
+  const suppliers = (data.suppliers || []).map(s => s.supplier);
+  const bldRates = data.bldRates || [];
+  // Use 6 core dimensions for readability
+  const dims = ['D15','D16','D17','D18','D01','D12','D11','D02','D03','D04','D05','D06','D07','D08','D09','D10','D13','D14'];
+  const dimNames = {};
+
+  // Aggregate: supplier × dim → avg rate
+  const matrix = {};
+  suppliers.forEach(s => { matrix[s] = {}; });
+  bldRates.forEach(r => {
+    if (matrix[r.supplier]) {
+      if (!matrix[r.supplier][r.dimension_id]) matrix[r.supplier][r.dimension_id] = [];
+      if (r.avg_rate != null) matrix[r.supplier][r.dimension_id].push(r.avg_rate);
+    }
+  });
+
+  // Get dim names from state
+  try {
+    const dimData = state.dimNameMap || {};
+    dims.forEach(d => { dimNames[d] = dimData[d] || d; });
+  } catch(e) { dims.forEach(d => { dimNames[d] = d; }); }
+
+  const colorScale = (v) => {
+    if (v == null) return '#f1f5f9';
+    if (v >= 90) return '#dcfce7';
+    if (v >= 70) return '#fef9c3';
+    if (v >= 50) return '#fed7aa';
+    return '#fecaca';
+  };
+  const textColor = (v) => {
+    if (v == null) return '#94a3b8';
+    if (v >= 90) return '#166534';
+    if (v >= 70) return '#854d0e';
+    if (v >= 50) return '#9a3412';
+    return '#991b1b';
+  };
+
+  container.innerHTML = `<div class="frozen-pane" style="max-height:500px;overflow:auto"><table class="data-table">
+    <thead><tr><th style="position:sticky;left:0;z-index:3;background:#f8fafc">供应商</th>
+    ${dims.map(d => `<th style="font-size:0.6rem;text-align:center;min-width:48px">${dimNames[d] || d}</th>`).join('')}
+    <th style="text-align:center">均分</th></tr></thead>
+    <tbody>${suppliers.map(s => {
+      let allVals = [];
+      dims.forEach(d => {
+        const vals = matrix[s][d] || [];
+        if (vals.length > 0) allVals.push(...vals);
+      });
+      const avg = allVals.length > 0 ? Math.round(allVals.reduce((a,b)=>a+b,0)/allVals.length) : null;
+      return `<tr>
+        <td style="position:sticky;left:0;z-index:1;background:#fff;font-weight:600">${s}</td>
+        ${dims.map(d => {
+          const vals = matrix[s][d] || [];
+          const v = vals.length > 0 ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : null;
+          return `<td style="text-align:center;background:${colorScale(v)};color:${textColor(v)};font-size:0.7rem;font-weight:600">${v != null ? v+'%' : '—'}</td>`;
+        }).join('')}
+        <td style="text-align:center;font-weight:700;font-size:0.8rem;background:${colorScale(avg)};color:${textColor(avg)}">${avg != null ? avg+'%' : '—'}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function renderVendorRadarCompare(data) {
+  const dom = document.getElementById('chartVendorRadar');
+  if (!dom || dom.clientWidth === 0) return;
+  if (typeof getOrCreateChart !== 'function') return;
+  const chart = getOrCreateChart('chartVendorRadar');
+  if (!chart) return;
+
+  const suppliers = (data.suppliers || []).slice(0, 5);
+  const bldRates = data.bldRates || [];
+  const coreDims = ['D15','D16','D17','D18','D01','D12','D11','D02'];
+  const dimShortNames = { D15:'环境', D16:'温度', D17:'照明', D18:'空气', D01:'空间', D12:'响应', D11:'节能', D02:'连续' };
+
+  const colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6'];
+  const seriesData = suppliers.map(s => {
+    const vals = {};
+    coreDims.forEach(d => { vals[d] = []; });
+    bldRates.forEach(r => {
+      if (r.supplier === s && vals[r.dimension_id] !== undefined && r.avg_rate != null) {
+        vals[r.dimension_id].push(r.avg_rate);
+      }
+    });
+    return {
+      name: s,
+      value: coreDims.map(d => {
+        const arr = vals[d] || [];
+        return arr.length > 0 ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : 0;
+      })
+    };
+  });
+
+  chart.setOption({
+    tooltip: {},
+    legend: { data: suppliers.map(s => s), bottom: 0, textStyle: { fontSize: 10 } },
+    radar: {
+      center: ['50%','50%'], radius: '60%',
+      indicator: coreDims.map(d => ({ name: dimShortNames[d], max: 100 })),
+      axisName: { fontSize: 10, color: '#64748b' }
+    },
+    series: seriesData.map((s, i) => ({
+      name: s.name, type: 'radar',
+      data: [{ value: s.value, name: s.name,
+        lineStyle: { color: colors[i], width: 1.5 },
+        areaStyle: { color: colors[i], opacity: 0.05 },
+        itemStyle: { color: colors[i] }, symbol: 'circle', symbolSize: 3
+      }]
+    }))
+  });
+}
+
+function renderVendorMeasuresTable(data) {
+  const container = $('#vendorMeasuresTable');
+  const measures = data.measures || [];
+  // Aggregate by supplier + status
+  const suppliers = [...new Set(measures.map(m => m.supplier))];
+  const statuses = ['未开始', '进行中', '已完成', '超期'];
+  container.innerHTML = `<table class="data-table">
+    <thead><tr><th>供应商</th>${statuses.map(s => `<th>${s}</th>`).join('')}<th>合计</th><th>完成率</th></tr></thead>
+    <tbody>${suppliers.map(sup => {
+      const row = statuses.map(st => {
+        const m = measures.find(x => x.supplier === sup && x.status === st);
+        return `<td>${m ? m.cnt : 0}</td>`;
+      }).join('');
+      const total = measures.filter(x => x.supplier === sup).reduce((s, x) => s + x.cnt, 0);
+      const done = (measures.find(x => x.supplier === sup && x.status === '已完成') || {}).cnt || 0;
+      const rate = total > 0 ? Math.round(done / total * 100) : 0;
+      return `<tr><td class="font-medium">${sup}</td>${row}<td>${total}</td><td><span class="badge ${rate>=80?'badge-green':rate>=50?'badge-amber':'badge-red'}">${rate}%</span></td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+window.showVendorDetail = async function(vendorName) {
+  try {
+    const data = await apiGet('/api/vendors/' + encodeURIComponent(vendorName));
+    const v = data.supplier;
+    const buildings = data.buildings || [];
+    const measures = data.measures || [];
+    // Compute initiator stats
+    const byteInit = measures.filter(m => (!m.initiator || m.initiator === '字节')).length;
+    const vendorInit = measures.filter(m => m.initiator === '供应商').length;
+
+    // Hide overview wrap, show detail
+    $('#vendorOverviewWrap').style.display = 'none';
+    const view = $('#vendorSingleView');
+    view.classList.remove('hidden');
+    view.innerHTML = `
+      <div class="flex items-center gap-3 mb-4">
+        <button onclick="window.hideVendorDetail()" class="text-sm text-blue-500 hover:text-blue-600">← 返回供应商总览</button>
+        <h3 class="text-lg font-semibold text-slate-800">${v.supplier}</h3>
+      </div>
+      <div class="grid grid-cols-4 gap-4 mb-5">
+        <div class="kpi-card"><div class="kpi-value">${v.building_count}</div><div class="kpi-label">覆盖楼宇</div></div>
+        <div class="kpi-card"><div class="kpi-value">${v.regions_covered}</div><div class="kpi-label">覆盖区域</div></div>
+        <div class="kpi-card"><div class="kpi-value">${v.self_owned}+${v.leased}</div><div class="kpi-label">自持+租赁</div></div>
+        <div class="kpi-card"><div class="kpi-value">${measures.length}</div><div class="kpi-label">改进措施</div><div class="kpi-sub">字节 ${byteInit} / 供应商 ${vendorInit}</div></div>
+      </div>
+      <div class="grid grid-cols-2 gap-5 mb-5">
+        <div class="content-card">
+          <h3 class="text-sm font-semibold text-slate-800 mb-3">负责楼宇清单</h3>
+          <table class="data-table">
+            <thead><tr><th>楼宇名称</th><th>区域</th><th>城市</th><th>资产性质</th><th>操作</th></tr></thead>
+            <tbody>${buildings.map(b => `<tr>
+              <td>${b.name}</td><td>${b.region}</td><td>${b.city}</td>
+              <td><span class="badge ${b.asset_type==='自持园区'?'badge-indigo':'badge-amber'}">${b.asset_type}</span></td>
+              <td><a onclick="navigateToBuilding(${b.id})" class="text-blue-500 hover:underline cursor-pointer">查看楼宇 →</a></td>
+            </tr>`).join('')}</tbody></table>
+        </div>
+        <div class="content-card">
+          <h3 class="text-sm font-semibold text-slate-800 mb-3">发起方分布</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl bg-blue-50 p-4 text-center">
+              <div class="text-2xl font-bold text-blue-600">${byteInit}</div>
+              <div class="text-xs text-blue-500 mt-1">字节发起</div>
+            </div>
+            <div class="rounded-xl bg-amber-50 p-4 text-center">
+              <div class="text-2xl font-bold text-amber-600">${vendorInit}</div>
+              <div class="text-xs text-amber-500 mt-1">供应商发起</div>
+            </div>
+          </div>
+          ${vendorInit > 0 ? `<div class="mt-3 text-xs text-slate-500">供应商主动性比率: <b>${(vendorInit/measures.length*100).toFixed(0)}%</b></div>` : ''}
+        </div>
+      </div>
+      <div class="content-card">
+        <h3 class="text-sm font-semibold text-slate-800 mb-3">改进措施清单</h3>
+        ${measures.length === 0 ? '<p class="text-sm text-slate-400 py-4">暂无措施</p>' : `
+        <table class="data-table">
+          <thead><tr><th>楼宇</th><th>措施名称</th><th>发起方</th><th>维度</th><th>状态</th><th>预算</th></tr></thead>
+          <tbody>${measures.slice(0, 30).map(m => `<tr>
+            <td>${m.building_name||'-'}</td>
+            <td class="text-xs">${m.name||'-'}</td>
+            <td><span class="badge ${m.initiator==='供应商'?'badge-amber':'badge-blue'}">${m.initiator||'字节'}</span></td>
+            <td class="text-xs">${dimIdToName(m.dimension_ids)}</td>
+            <td><span class="badge ${m.status==='已完成'?'badge-green':m.status==='进行中'?'badge-blue':m.status==='超期'?'badge-red':'badge-gray'}">${m.status}</span></td>
+            <td class="text-xs">${m.budget?'¥'+(m.budget/10000).toFixed(1)+'万':'-'}</td>
+          </tr>`).join('')}</tbody></table>`}
+      </div>`;
+  } catch(e) { showToast('加载失败: '+e.message, 'error'); }
+};
+
+// Hide vendor detail and show overview (no reload)
+window.hideVendorDetail = function() {
+  $('#vendorSingleView').classList.add('hidden');
+  $('#vendorOverviewWrap').style.display = '';
 };
 
 // ---- Boot ----

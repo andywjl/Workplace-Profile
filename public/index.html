@@ -13,76 +13,43 @@
 <!-- ============================================================
      LANDING PAGE
      ============================================================ -->
-<div id="landingPage" class="fixed inset-0 z-[300] overflow-y-auto" style="background: linear-gradient(170deg, #f8fafc 0%, #f1f5f9 30%, #eef2ff 70%, #f0f4f8 100%);">
-  <!-- Top bar -->
-  <div class="fixed top-0 left-0 right-0 z-10 border-b border-transparent">
-    <div class="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-4">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(111,123,178,0.12);">
-          <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none"><rect x="1" y="5" width="3" height="10" rx="1" fill="#6f7bb2"/><rect x="5" y="3" width="3" height="12" rx="1" fill="#6f7bb2" opacity="0.8"/><rect x="9" y="2" width="3" height="13" rx="1" fill="#6f7bb2" opacity="0.9"/><rect x="0" y="14" width="14" height="1" rx="0.5" fill="#c7a67a" opacity="0.5"/></svg>
-        </div>
-        <span class="text-sm font-semibold tracking-tight" style="color:#475569">楼宇档案系统</span>
+<div id="landingPage" class="fixed inset-0 z-[300] overflow-y-auto bg-white">
+  <div class="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-4">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50">
+        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none"><rect x="1" y="5" width="3" height="10" rx="1" fill="#3b82f6"/><rect x="5" y="3" width="3" height="12" rx="1" fill="#3b82f6" opacity="0.8"/><rect x="9" y="2" width="3" height="13" rx="1" fill="#3b82f6" opacity="0.9"/><rect x="0" y="14" width="14" height="1" rx="0.5" fill="#f59e0b" opacity="0.5"/></svg>
       </div>
-      <button id="btnShowLogin" class="text-xs font-medium rounded-lg px-3 py-1.5 transition hover:bg-white/60" style="color:#64748b;">
-        登录
-      </button>
+      <span class="text-sm font-semibold tracking-tight text-slate-700">楼宇档案系统</span>
     </div>
+    <button id="btnShowLogin" class="text-xs font-medium rounded-lg px-3 py-1.5 transition hover:bg-slate-50 text-slate-500">登录</button>
   </div>
-
-  <!-- Hero content -->
-  <div class="mx-auto flex max-w-[1200px] min-h-screen flex-col justify-center px-6 pt-16 pb-16">
+  <div class="mx-auto flex max-w-[1200px] min-h-[calc(100vh-64px)] flex-col justify-center px-6 pb-16">
     <div class="grid lg:grid-cols-2 gap-12 items-center">
-      <!-- Left: Text content -->
       <div>
-        <h1 class="text-4xl lg:text-5xl font-bold tracking-tight leading-tight mb-6" style="color:#1e293b;">
-          让楼宇服务更标准、<br/>更贴近理念和原则、<br/>结果更可衡量
-        </h1>
-        <p class="text-lg leading-relaxed mb-10" style="color:#64748b;">
-          建立统一管理目标和框架，<br/>支持长期的精细化运营
-        </p>
-
+        <h1 class="text-4xl lg:text-5xl font-bold tracking-tight leading-tight mb-6 text-slate-800">让楼宇服务更标准、<br/>更贴近理念和原则、<br/>结果更可衡量</h1>
+        <p class="text-lg leading-relaxed mb-10 text-slate-500">建立统一管理目标和框架，<br/>支持长期的精细化运营</p>
         <div class="flex items-center gap-4">
-          <button id="btnEnterSystem" class="rounded-xl px-6 py-3 text-sm font-semibold text-white transition active:scale-[0.98]" style="background:#6f7bb2;" onmouseover="this.style.background='#5d69a0'" onmouseout="this.style.background='#6f7bb2'">
-            直接进入楼宇档案 →
-          </button>
-          <span class="text-xs" style="color:#cbd5e1">无需登录即可浏览</span>
+          <button id="btnEnterSystem" class="rounded-xl px-6 py-3 text-sm font-semibold text-white transition active:scale-[0.98] bg-blue-500 hover:bg-blue-600 hidden">登录后进入系统 →</button>
         </div>
       </div>
-
-      <!-- Right: Visual -->
       <div class="hidden lg:flex items-center justify-center relative">
-        <!-- Decorative glow -->
-        <div class="absolute w-80 h-80 rounded-full opacity-[0.06]" style="background:radial-gradient(circle, #6f7bb2, transparent);top:50%;left:50%;transform:translate(-50%,-50%)"></div>
-
-        <!-- Building illustration card -->
+        <div class="absolute w-80 h-80 rounded-full opacity-[0.06]" style="background:radial-gradient(circle, #3b82f6, transparent);top:50%;left:50%;transform:translate(-50%,-50%)"></div>
         <div class="relative w-full max-w-sm">
-          <div class="rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur p-8 shadow-sm">
-            <!-- Mini building skyline -->
+          <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
             <svg class="w-full h-32 mb-6" viewBox="0 0 320 128" fill="none">
-              <rect x="10" y="56" width="40" height="70" rx="4" fill="#6f7bb2" opacity="0.2"/>
-              <rect x="55" y="40" width="40" height="86" rx="4" fill="#6f7bb2" opacity="0.35"/>
-              <rect x="100" y="24" width="40" height="102" rx="4" fill="#6f7bb2" opacity="0.55"/>
-              <rect x="145" y="48" width="40" height="78" rx="4" fill="#6f7bb2" opacity="0.3"/>
-              <rect x="190" y="60" width="40" height="66" rx="4" fill="#6f7bb2" opacity="0.15"/>
-              <rect x="235" y="44" width="40" height="82" rx="4" fill="#6f7bb2" opacity="0.25"/>
-              <rect x="280" y="52" width="40" height="74" rx="4" fill="#6f7bb2" opacity="0.18"/>
-              <rect x="8" y="125" width="304" height="3" rx="1.5" fill="#c7a67a" opacity="0.4"/>
+              <rect x="10" y="56" width="40" height="70" rx="4" fill="#3b82f6" opacity="0.2"/>
+              <rect x="55" y="40" width="40" height="86" rx="4" fill="#3b82f6" opacity="0.35"/>
+              <rect x="100" y="24" width="40" height="102" rx="4" fill="#3b82f6" opacity="0.55"/>
+              <rect x="145" y="48" width="40" height="78" rx="4" fill="#3b82f6" opacity="0.3"/>
+              <rect x="190" y="60" width="40" height="66" rx="4" fill="#3b82f6" opacity="0.15"/>
+              <rect x="235" y="44" width="40" height="82" rx="4" fill="#3b82f6" opacity="0.25"/>
+              <rect x="280" y="52" width="40" height="74" rx="4" fill="#3b82f6" opacity="0.18"/>
+              <rect x="8" y="125" width="304" height="3" rx="1.5" fill="#f59e0b" opacity="0.4"/>
             </svg>
-
-            <!-- Stat items -->
             <div class="grid grid-cols-3 gap-3 text-center">
-              <div>
-                <div class="text-xl font-bold" style="color:#475569">100+</div>
-                <div class="text-[0.6rem]" style="color:#94a3b8">覆盖楼宇</div>
-              </div>
-              <div>
-                <div class="text-xl font-bold" style="color:#475569">5</div>
-                <div class="text-[0.6rem]" style="color:#94a3b8">管理区域</div>
-              </div>
-              <div>
-                <div class="text-xl font-bold" style="color:#475569">18</div>
-                <div class="text-[0.6rem]" style="color:#94a3b8">管理维度</div>
-              </div>
+              <div><div class="text-xl font-bold text-slate-700">100+</div><div class="text-[0.6rem] text-slate-400">覆盖楼宇</div></div>
+              <div><div class="text-xl font-bold text-slate-700">5</div><div class="text-[0.6rem] text-slate-400">管理区域</div></div>
+              <div><div class="text-xl font-bold text-slate-700">18</div><div class="text-[0.6rem] text-slate-400">管理维度</div></div>
             </div>
           </div>
         </div>
@@ -92,24 +59,22 @@
 
   <!-- Login Modal -->
   <div id="loginModal" class="fixed inset-0 z-[310] hidden items-center justify-center" style="background:rgba(15,23,42,0.25);backdrop-filter:blur(4px)">
-    <div class="bg-white rounded-3xl shadow-xl border border-slate-200/70 w-full max-w-sm mx-4 overflow-hidden">
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-200 w-full max-w-sm mx-4 overflow-hidden">
       <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-        <h3 class="text-base font-semibold" style="color:#334155">登录系统</h3>
+        <h3 class="text-base font-semibold text-slate-700">登录系统</h3>
         <button id="btnCloseLogin" class="text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>
       </div>
       <div class="p-6">
         <div class="mb-4">
-          <label class="block text-xs font-medium mb-1.5" style="color:#64748b">账号</label>
-          <input id="loginAccount" type="text" class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 placeholder-slate-300 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-50 transition" placeholder="请输入您的账号" autocomplete="off" />
+          <label class="block text-xs font-medium mb-1.5 text-slate-500">账号</label>
+          <input id="loginAccount" type="text" class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 placeholder-slate-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-50 transition" placeholder="请输入您的账号" autocomplete="off" />
         </div>
         <div class="mb-5">
-          <label class="block text-xs font-medium mb-1.5" style="color:#64748b">密码</label>
-          <input id="loginPassword" type="password" class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 placeholder-slate-300 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-50 transition" placeholder="请输入密码" />
+          <label class="block text-xs font-medium mb-1.5 text-slate-500">密码</label>
+          <input id="loginPassword" type="password" class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 placeholder-slate-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-50 transition" placeholder="请输入密码" />
         </div>
-        <button id="btnLogin" class="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition active:scale-[0.98]" style="background:#6f7bb2;" onmouseover="this.style.background='#5d69a0'" onmouseout="this.style.background='#6f7bb2'">
-          进入系统
-        </button>
-        <p class="text-[0.65rem] text-center mt-3" style="color:#cbd5e1">演示版本 · 输入任意账号即可登录</p>
+        <button id="btnLogin" class="w-full rounded-xl bg-blue-500 hover:bg-blue-600 py-2.5 text-sm font-semibold text-white transition active:scale-[0.98]">进入系统</button>
+        <p class="text-[0.65rem] text-center mt-3 text-slate-300">演示版本 · 请使用授权账号登录</p>
       </div>
     </div>
   </div>
@@ -118,298 +83,609 @@
 <!-- ============================================================
      LOADING SCREEN
      ============================================================ -->
-<div id="loadingScreen" class="fixed inset-0 z-[200] flex-col items-center justify-center transition-opacity duration-500" style="display:none;background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #eef2ff 100%);">
-  <!-- Animated logo area -->
+<div id="loadingScreen" class="fixed inset-0 z-[200] flex-col items-center justify-center transition-opacity duration-500 bg-white" style="display:none">
   <div class="flex flex-col items-center">
-    <!-- Building icon -->
     <div class="mb-8 relative">
-      <svg class="w-20 h-20" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="8" y="28" width="14" height="44" rx="2" fill="#6f7bb2" opacity="0.3" class="loading-building"/>
-        <rect x="24" y="20" width="14" height="52" rx="2" fill="#6f7bb2" opacity="0.5" class="loading-building" style="animation-delay:0.15s"/>
-        <rect x="40" y="12" width="14" height="60" rx="2" fill="#6f7bb2" opacity="0.75" class="loading-building" style="animation-delay:0.3s"/>
-        <rect x="56" y="24" width="14" height="48" rx="2" fill="#6f7bb2" opacity="0.4" class="loading-building" style="animation-delay:0.2s"/>
-        <rect x="6" y="70" width="68" height="4" rx="2" fill="#c7a67a" opacity="0.6"/>
+      <svg class="w-20 h-20" viewBox="0 0 80 80" fill="none">
+        <rect x="8" y="28" width="14" height="44" rx="2" fill="#3b82f6" opacity="0.3" class="loading-building"/>
+        <rect x="24" y="20" width="14" height="52" rx="2" fill="#3b82f6" opacity="0.5" class="loading-building" style="animation-delay:0.15s"/>
+        <rect x="40" y="12" width="14" height="60" rx="2" fill="#3b82f6" opacity="0.75" class="loading-building" style="animation-delay:0.3s"/>
+        <rect x="56" y="24" width="14" height="48" rx="2" fill="#3b82f6" opacity="0.4" class="loading-building" style="animation-delay:0.2s"/>
+        <rect x="6" y="70" width="68" height="4" rx="2" fill="#f59e0b" opacity="0.6"/>
       </svg>
-      <!-- Pulse ring -->
-      <div class="absolute inset-0 rounded-full animate-ping opacity-10" style="background:radial-gradient(circle, #6f7bb2, transparent)"></div>
+      <div class="absolute inset-0 rounded-full animate-ping opacity-10" style="background:radial-gradient(circle, #3b82f6, transparent)"></div>
     </div>
-
-    <!-- Title -->
-    <h1 class="text-2xl font-bold tracking-tight mb-2" style="color:#475569">楼宇档案系统</h1>
-    <p class="text-sm mb-8" style="color:#94a3b8">Workplace Profile System</p>
-
-    <!-- Loading indicator -->
+    <h1 class="text-2xl font-bold tracking-tight mb-2 text-slate-700">楼宇档案系统</h1>
+    <p class="text-sm mb-8 text-slate-400">Workplace Profile System</p>
     <div class="flex items-center gap-1.5">
-      <span class="w-2 h-2 rounded-full" style="background:#6f7bb2;animation:loadBounce 0.6s infinite"></span>
-      <span class="w-2 h-2 rounded-full" style="background:#91a79a;animation:loadBounce 0.6s infinite 0.1s"></span>
-      <span class="w-2 h-2 rounded-full" style="background:#c7a67a;animation:loadBounce 0.6s infinite 0.2s"></span>
+      <span class="w-2 h-2 rounded-full bg-blue-500" style="animation:loadBounce 0.6s infinite"></span>
+      <span class="w-2 h-2 rounded-full bg-emerald-500" style="animation:loadBounce 0.6s infinite 0.1s"></span>
+      <span class="w-2 h-2 rounded-full bg-amber-500" style="animation:loadBounce 0.6s infinite 0.2s"></span>
     </div>
-    <p class="text-xs mt-4" style="color:#cbd5e1" id="loadingHint">正在加载数据...</p>
+    <p class="text-xs mt-4 text-slate-300" id="loadingHint">正在加载数据...</p>
   </div>
 </div>
 
 <!-- ============================================================
-     TOP BAR: China/Non-China + Role selector
+     SIDEBAR + MAIN LAYOUT
      ============================================================ -->
-<div id="topBar" class="fixed top-0 left-0 right-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur">
-  <div class="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3">
-    <div class="flex items-center gap-4">
-      <h1 class="text-lg font-semibold tracking-tight text-slate-800">楼宇档案系统</h1>
-      <div class="flex items-center rounded-xl bg-slate-100 p-1 text-sm">
-        <button class="geo-tab active rounded-lg px-4 py-1.5 font-medium transition" data-geo="china">China</button>
-        <button class="geo-tab rounded-lg px-4 py-1.5 font-medium text-slate-400 transition" data-geo="nonchina">Non-China</button>
+<!-- Sidebar (always visible) -->
+<aside id="sidebar" class="fixed left-0 top-0 bottom-0 flex flex-col z-40 bg-white" style="width:var(--sidebar-w)">
+    <!-- Logo -->
+    <div class="sidebar-logo-area">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 flex-shrink-0">
+          <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none"><rect x="1" y="5" width="3" height="10" rx="1" fill="#3b82f6"/><rect x="5" y="3" width="3" height="12" rx="1" fill="#3b82f6" opacity="0.8"/><rect x="9" y="2" width="3" height="13" rx="1" fill="#3b82f6" opacity="0.9"/><rect x="0" y="14" width="14" height="1" rx="0.5" fill="#f59e0b" opacity="0.5"/></svg>
+        </div>
+        <div class="sidebar-logo-text">
+          <div class="text-sm font-semibold text-slate-800 leading-tight">楼宇档案系统</div>
+          <div class="text-[0.6rem] text-slate-400">Workplace Profile</div>
+        </div>
       </div>
     </div>
-    <button id="btnBackToLanding" class="text-xs rounded-lg px-3 py-1.5 transition hover:bg-slate-100" style="color:#94a3b8;">
-      ← 回到主页
-    </button>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-3 py-4 space-y-0.5">
+      <button class="sidebar-nav active" data-view="overview">
+        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="5" x2="11" y2="5" stroke="currentColor" stroke-width="1.5"/></svg>
+        全国总览
+      </button>
+      <button class="sidebar-nav" data-view="region" onclick="toggleSidebarRegion(event)">
+        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="1.5" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="10" r="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M1 12l3-3 3 2 5-5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="flex-1 text-left">区域分析</span>
+        <svg id="regionExpandIcon" class="w-3 h-3 transition-transform" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <div id="sidebarRegionSubs" class="hidden ml-4 space-y-0.5 border-l-2 border-blue-100 pl-3">
+        <button class="sidebar-region-sub" data-region="京区" onclick="event.stopPropagation();window.drillToRegion('京区')">京区</button>
+        <button class="sidebar-region-sub" data-region="北区" onclick="event.stopPropagation();window.drillToRegion('北区')">北区</button>
+        <button class="sidebar-region-sub" data-region="东区" onclick="event.stopPropagation();window.drillToRegion('东区')">东区</button>
+        <button class="sidebar-region-sub" data-region="西区" onclick="event.stopPropagation();window.drillToRegion('西区')">西区</button>
+        <button class="sidebar-region-sub" data-region="南区" onclick="event.stopPropagation();window.drillToRegion('南区')">南区</button>
+      </div>
+      <button class="sidebar-nav" data-view="building" id="btnSidebarBuilding" onclick="window.toggleBldSubs();switchView('building')">
+        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none"><rect x="2" y="5" width="4" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="10" y="3" width="4" height="11" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="6.5" y="6" width="3" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+        <span class="flex-1 text-left">单楼宇档案</span>
+        <svg id="buildingExpandIcon" class="w-3 h-3 transition-transform" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <div id="sidebarBuildingSubs" class="hidden ml-4 space-y-0.5 border-l-2 border-blue-100 pl-3">
+        <button class="sidebar-bld-sub" onclick="event.stopPropagation();switchView('building')">📋 总览</button>
+        <button class="sidebar-bld-sub" onclick="event.stopPropagation();window.openDimPage('D15')">🛡️ 环境安全</button>
+        <button class="sidebar-bld-sub" onclick="event.stopPropagation();window.openDimPage('D16')">🌡️ 温度适宜</button>
+        <button class="sidebar-bld-sub" onclick="event.stopPropagation();window.openDimPage('D17')">💡 照明亮堂</button>
+        <button class="sidebar-bld-sub" onclick="event.stopPropagation();window.openDimPage('D18')">🌬️ 空气清新</button>
+      </div>
+      <button class="sidebar-nav" data-view="vendor">
+        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none"><circle cx="5" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="5" r="1.5" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="10" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 6v3m6-1v2m-3-1v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        供应商管理
+      </button>
+    </nav>
+
+    <!-- Building Search (in sidebar, shown when building view active) -->
+    <div id="sidebarBuildingArea" class="px-3 py-3 border-t border-slate-100 hidden">
+      <div class="relative" id="buildingSearchWrap" style="min-width:0">
+        <input id="buildingSearchInput" class="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-50 transition" placeholder="搜索楼宇名称或城市..." autocomplete="off" />
+        <div id="buildingDropdown" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;max-height:260px;width:100%;overflow-y:auto;border-radius:12px;border:1px solid #e2e8f0;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,0.1);z-index:50"></div>
+      </div>
+    </div>
+
+    <!-- Bottom actions -->
+    <div class="px-3 py-3 border-t border-slate-100">
+      <button id="btnBackToLanding" onclick="window.logout()" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><path d="M10 4l-4 4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        登出 / 回到主页
+      </button>
+      <div class="flex items-center rounded-lg bg-slate-100 p-0.5 mt-2 text-xs">
+        <button class="geo-tab active w-1/2 rounded-md py-1.5 font-medium transition text-center" data-geo="china">China</button>
+        <button class="geo-tab w-1/2 rounded-md py-1.5 font-medium text-slate-400 transition text-center" data-geo="nonchina">Non-China</button>
+      </div>
+    </div>
+  </aside>
+
+<div id="chinaPage" class="min-h-screen bg-white" style="margin-left:var(--sidebar-w);transition:margin-left .3s ease">
+
+  <!-- Main Content -->
+  <div class="flex-1 flex flex-col min-h-screen">
+
+    <!-- Header Bar -->
+    <header id="headerBar" class="sticky top-0 z-30 px-6 py-3 flex items-center justify-between gap-4">
+      <!-- Sidebar collapse toggle -->
+      <button id="sidebarCollapseBtn" class="flex-shrink-0" onclick="toggleSidebar()" title="折叠侧边栏">◀</button>
+      <!-- Breadcrumb -->
+      <div id="breadcrumb" class="flex items-center gap-1.5 text-sm text-slate-500">
+        <span class="crumb font-medium text-slate-700" data-view="overview">全国总览</span>
+        <span class="crumb-sep hidden text-slate-300">/</span>
+        <span class="crumb hidden font-medium text-slate-700" data-view="region">区域分析</span>
+        <span class="crumb-sep-2 hidden text-slate-300">/</span>
+        <span class="crumb-2 hidden font-medium text-slate-700" data-view="building">单楼宇档案</span>
+        <button onclick="openCmdPalette()" class="ml-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-400 hover:text-slate-600 hover:border-slate-300 transition flex items-center gap-1" title="全局搜索 (Cmd+K)">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span class="hidden sm:inline">搜索</span>
+          <kbd class="text-[0.55rem] text-slate-300 bg-slate-50 px-1 rounded hidden sm:inline">⌘K</kbd>
+        </button>
+      </div>
+
+      <!-- Global Filters -->
+      <div id="globalFilters" class="flex items-center gap-3">
+        <span class="text-xs text-slate-400">筛选</span>
+        <select id="filterRegion" class="rounded-lg border-slate-200 bg-white text-xs px-2 py-1.5 text-slate-600 focus:border-blue-400 focus:outline-none">
+          <option value="">全部区域</option>
+          <option value="京区">京区</option><option value="北区">北区</option>
+          <option value="东区">东区</option><option value="西区">西区</option><option value="南区">南区</option>
+        </select>
+        <select id="filterAsset" class="rounded-lg border-slate-200 bg-white text-xs px-2 py-1.5 text-slate-600 focus:border-blue-400 focus:outline-none">
+          <option value="">全部性质</option>
+          <option value="自持园区">自持园区</option><option value="租赁职场">租赁职场</option>
+        </select>
+        <select id="filterSupplier" class="rounded-lg border-slate-200 bg-white text-xs px-2 py-1.5 text-slate-600 focus:border-blue-400 focus:outline-none">
+          <option value="">全部供应商</option>
+        </select>
+        <select id="filterPeriod" class="rounded-lg border-slate-200 bg-white text-xs px-2 py-1.5 text-slate-600 focus:border-blue-400 focus:outline-none">
+          <option value="H1_2026">H1 2026</option>
+          <option value="H2_2025">H2 2025</option>
+        </select>
+        <span class="text-xs text-slate-400" id="dataInfo"></span>
+        <button onclick="exportPDF()" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500 hover:bg-slate-50 transition" title="导出 PDF 报告">📄 导出</button>
+        <span id="userRoleBadge" class="text-xs text-slate-400 ml-2"></span>
+        <button onclick="window.logout()" class="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-400 hover:text-red-500 hover:border-red-200 transition ml-2">登出</button>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <div class="flex-1 px-6 pb-10">
+
+      <!-- Summary Banner -->
+      <div id="summaryBanner" class="mt-5 hidden">
+        <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span id="summaryBannerText"></span>
+      </div>
+
+      <!-- ============================================================
+           VIEW 1: 全国总览
+           ============================================================ -->
+      <div id="viewOverview" class="view-panel mt-5">
+
+        <!-- KPI Cards -->
+        <div id="kpiCards" class="grid grid-cols-5 gap-4"></div>
+
+        <!-- Key-4 Dashboard -->
+        <div class="mt-5 content-card">
+          <div class="flex items-center gap-2 mb-4">
+            <h3 class="text-sm font-semibold text-slate-800">四大核心维度</h3>
+            <span class="text-xs text-slate-400">环境安全 · 温度适宜 · 照明亮堂 · 空气清新</span>
+          </div>
+          <div id="key4KpiCards" class="grid grid-cols-4 gap-4 mb-5"></div>
+          <div id="chartKey4Region" style="height:320px"></div>
+        </div>
+
+        <!-- Radar Chart: H1 vs H2 18维度 -->
+        <div class="mt-5 content-card">
+          <h3 class="text-sm font-semibold text-slate-800 mb-3">📊 18维度雷达图 <span class="text-xs text-slate-400 font-normal">H1 2026 vs H2 2025</span></h3>
+          <div id="chartRadarOverview" style="width:100%;height:520px"></div>
+        </div>
+
+        <!-- Dimension × Region Heatmap -->
+        <div class="mt-5 content-card">
+          <h3 class="mb-3 text-sm font-semibold text-slate-800">维度 × 区域 达标热力图 <span class="text-xs text-slate-400 font-normal">点击单元格下钻</span></h3>
+          <div id="chartDimRegionHeatmap" style="height:480px"></div>
+        </div>
+
+        <!-- Charts row: 18-dimension bar + Self-owned vs Leased -->
+        <div class="mt-5 grid grid-cols-2 gap-5">
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <h3 class="mb-3 text-sm font-semibold text-slate-800">18 维度达标率</h3>
+            <div id="chartDimBar" style="height:420px"></div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <h3 class="mb-3 text-sm font-semibold text-slate-800">自持园区 vs 租赁职场 维度对比</h3>
+            <div id="chartAssetCompare" style="height:420px"></div>
+          </div>
+        </div>
+
+        <!-- Region Summary -->
+        <div class="mt-5 content-card">
+          <h3 class="mb-3 text-sm font-semibold text-slate-800">区域概览</h3>
+          <div id="regionSummaryCards" class="grid grid-cols-5 gap-4"></div>
+        </div>
+
+        <!-- Measures Summary Table -->
+        <div class="mt-5 content-card">
+          <h3 class="mb-3 text-sm font-semibold text-slate-800">改进措施汇总</h3>
+          <div id="measuresTableOverview" class="overflow-x-auto"></div>
+        </div>
+
+        <!-- Building List -->
+        <div class="mt-5 content-card">
+          <h3 class="mb-3 text-sm font-semibold text-slate-800">楼宇列表</h3>
+          <div id="buildingTableOverview" class="overflow-x-auto"></div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           VIEW 2: 区域分析
+           ============================================================ -->
+      <div id="viewRegion" class="view-panel mt-5 hidden">
+
+        <!-- Region Tag Tabs -->
+        <div id="regionTabs" class="mb-4 flex flex-wrap gap-2"></div>
+
+        <!-- Regional KPI Cards -->
+        <div id="regionKpiCards" class="grid grid-cols-5 gap-4"></div>
+
+        <!-- Regional Dimension Chart -->
+        <div class="mt-5 content-card">
+          <h3 class="mb-3 text-sm font-semibold text-slate-800" id="regionChartTitle">区域维度达标率</h3>
+          <div id="chartRegionDim" style="height:420px"></div>
+        </div>
+
+        <!-- Regional Asset Compare Chart -->
+        <div class="mt-5 content-card">
+          <h3 class="mb-3 text-sm font-semibold text-slate-800">自持园区 vs 租赁职场 维度对比</h3>
+          <div id="chartRegionAssetCompare" style="height:420px"></div>
+        </div>
+
+        <!-- Regional Building Ranking -->
+        <div class="mt-5 content-card">
+          <h3 class="mb-3 text-sm font-semibold text-slate-800">区域内楼宇排行</h3>
+          <div id="regionBuildingTable" class="overflow-x-auto"></div>
+        </div>
+
+        <!-- Regional Measures -->
+        <div class="mt-5 content-card">
+          <h3 class="mb-3 text-sm font-semibold text-slate-800">区域改进措施</h3>
+          <div id="regionMeasuresTable" class="overflow-x-auto"></div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           VIEW 3: 单楼宇档案
+           ============================================================ -->
+      <div id="viewBuilding" class="view-panel mt-5 hidden">
+
+        <!-- Building Meta Header -->
+        <div class="flex items-center gap-4 mb-4">
+          <button id="btnBackFromBuilding" class="text-sm text-slate-400 hover:text-slate-600 transition flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><path d="M10 4l-4 4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            返回
+          </button>
+          <div class="relative" style="min-width:250px">
+            <input id="buildingSelectSearch" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm w-full focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-50" placeholder="搜索楼宇名称或城市..." autocomplete="off" />
+            <div id="buildingSelectDropdown" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;max-height:300px;width:100%;overflow-y:auto;border-radius:12px;border:1px solid #e2e8f0;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,0.1);z-index:60"></div>
+          </div>
+          <select id="buildingSelect" class="hidden"></select>
+          <span class="text-xs text-slate-400" id="buildingBreadcrumb"></span>
+          <span class="text-xs text-slate-400 ml-auto">周期:</span>
+          <select id="indicatorPeriodSwitcher" class="rounded-lg border-slate-200 bg-white text-xs px-2 py-1 text-slate-600">
+            <option value="H1_2026">H1 2026</option>
+            <option value="H2_2025">H2 2025</option>
+          </select>
+          <button id="btnSaveIndicators" class="rounded-xl bg-blue-500 hover:bg-blue-600 px-4 py-1.5 text-xs font-medium text-white transition">保存</button>
+          <span id="indicatorSaveStatus" class="text-xs text-slate-400 hidden"></span>
+        </div>
+
+        <!-- Building Info Card (compact) -->
+        <div id="buildingInfoCard" class="content-card"></div>
+
+        <!-- Radar Chart + Portrait (always visible) -->
+        <div class="mt-4 grid grid-cols-2 gap-5">
+          <div class="content-card">
+            <h3 class="text-sm font-semibold text-slate-800 mb-2">📊 18维度雷达图 <span class="text-xs text-slate-400 font-normal">H1 2026 vs H2 2025</span></h3>
+            <div id="chartRadar" style="width:100%;height:380px"></div>
+          </div>
+          <div class="content-card">
+            <h3 class="text-sm font-semibold text-slate-800 mb-2">🧠 智能画像分析</h3>
+            <div id="portraitContent">
+              <div class="flex flex-col items-center justify-center py-4 text-slate-400"><p class="text-sm">加载中...</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 10-Tab Navigation -->
+        <div id="bldTabBar" class="mt-4 flex items-center border-b border-slate-200 overflow-x-auto">
+          <button class="bld-tab active" data-bldtab="overview">📋 总览</button>
+          <button class="bld-tab" data-bldtab="safety">🛡️ 环境安全</button>
+          <button class="bld-tab" data-bldtab="temperature">🌡️ 温度适宜</button>
+          <button class="bld-tab" data-bldtab="lighting">💡 照明亮堂</button>
+          <button class="bld-tab" data-bldtab="air">🌬️ 空气清新</button>
+          <button class="bld-tab" data-bldtab="energy">⚡ 能效与设备</button>
+          <button class="bld-tab" data-bldtab="service">🔧 服务效率</button>
+          <button class="bld-tab" data-bldtab="space">🏢 空间与资产</button>
+          <button class="bld-tab" data-bldtab="cost">💰 成本分析</button>
+          <button class="bld-tab" data-bldtab="improve">📝 改进计划</button>
+          <button class="bld-tab" data-bldtab="supplier">🏭 供应商</button>
+        </div>
+
+        <!-- Tab Content Area -->
+        <div id="bldTabContent" class="mt-5"></div>
+      </div>
+
+      <!-- ============================================================
+           VIEW 4: 供应商管理
+           ============================================================ -->
+      <div id="viewVendor" class="view-panel mt-5 hidden">
+        <!-- Vendor Overview -->
+        <div id="vendorOverviewWrap">
+        <div id="vendorOverview">
+          <div class="grid grid-cols-4 gap-4" id="vendorKpiCards"></div>
+          <div class="mt-5 grid grid-cols-2 gap-5">
+            <div class="content-card">
+              <h3 class="text-sm font-semibold text-slate-800 mb-3">📊 供应商楼宇份额</h3>
+              <div id="chartVendorShare" style="height:320px"></div>
+            </div>
+            <div class="content-card text-center py-16">
+              <div class="text-3xl mb-2">🏆</div>
+              <h3 class="text-sm font-semibold text-slate-400">供应商KPI排名</h3>
+              <p class="text-xs text-slate-300 mt-1">待开发</p>
+            </div>
+          </div>
+          <div class="mt-5 content-card">
+            <h3 class="text-sm font-semibold text-slate-800 mb-3">📋 供应商详情表</h3>
+            <div id="vendorDetailTable" class="overflow-x-auto"></div>
+          </div>
+          <div class="mt-5 content-card">
+            <h3 class="text-sm font-semibold text-slate-800 mb-3">📊 供应商 × 维度达标率矩阵</h3>
+            <div id="vendorDimMatrix" class="overflow-x-auto"></div>
+          </div>
+          <div class="mt-5 content-card">
+            <h3 class="text-sm font-semibold text-slate-800 mb-3">📝 改进措施汇总</h3>
+            <div id="vendorMeasuresTable" class="overflow-x-auto"></div>
+          </div>
+          <div class="mt-5 grid grid-cols-3 gap-5">
+            <div class="content-card text-center py-10">
+              <div class="text-3xl mb-2">📊</div>
+              <h3 class="text-sm font-semibold text-slate-400">改进费用分析</h3>
+              <p class="text-xs text-slate-300 mt-1">待开发</p>
+            </div>
+            <div class="content-card text-center py-10">
+              <div class="text-3xl mb-2">🔍</div>
+              <h3 class="text-sm font-semibold text-slate-400">供应商对比</h3>
+              <p class="text-xs text-slate-300 mt-1">待开发</p>
+            </div>
+            <div class="content-card text-center py-10">
+              <div class="text-3xl mb-2">🛡️</div>
+              <h3 class="text-sm font-semibold text-slate-400">风险与决策支持</h3>
+              <p class="text-xs text-slate-300 mt-1">待开发</p>
+            </div>
+          </div>
+          </div>
+          <div class="mt-5 content-card">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-slate-800">⚖️ 供应商多维对比</h3>
+              <span class="text-xs text-slate-400">支持多供应商雷达图叠加</span>
+            </div>
+            <div id="chartVendorRadar" style="width:100%;height:420px"></div>
+          </div>
+          </div><!-- end vendorOverviewWrap -->
+          <!-- Single vendor detail (shown on click) -->
+          <div id="vendorSingleView" class="hidden"></div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           VIEW 5: 维度专题
+           ============================================================ -->
+      <div id="viewDimDetail" class="view-panel mt-5 hidden">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="text-sm text-slate-400 cursor-pointer hover:text-blue-500" onclick="switchView('building')">← 返回楼宇档案</span>
+          <h3 class="text-lg font-semibold text-slate-800" id="dimPageTitle">维度专题</h3>
+          <span class="text-xs text-slate-400">全国视角 · 100 栋楼宇</span>
+        </div>
+        <div id="dimKpiCards" class="grid grid-cols-4 gap-4 mb-4"></div>
+        <div id="dimAlertBanner" class="mb-4"></div>
+        <div class="content-card mb-4">
+          <h3 class="text-sm font-semibold text-slate-800 mb-3">📋 子指标状态</h3>
+          <div id="dimIndicatorTable" class="overflow-x-auto"></div>
+        </div>
+        <div class="content-card">
+          <h3 class="text-sm font-semibold text-slate-800 mb-3">🔧 关联改进措施</h3>
+          <div id="dimMeasures" class="overflow-x-auto"></div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 
 <!-- ============================================================
      NON-CHINA PLACEHOLDER PAGE
      ============================================================ -->
-<div id="nonChinaPage" class="hidden pt-20">
-  <div class="mx-auto flex max-w-[1200px] flex-col items-center justify-center px-6 py-32">
+<div id="nonChinaPage" class="hidden min-h-screen flex items-center justify-center bg-slate-50" style="margin-left:var(--sidebar-w);transition:margin-left .3s ease">
+  <div class="flex flex-col items-center py-32">
     <div class="mb-6 text-8xl">🌍</div>
     <h2 class="mb-4 text-3xl font-semibold text-slate-700">Non-China — 敬请期待</h2>
     <p class="max-w-lg text-center text-slate-500">该模块目前正在规划中，后续将覆盖全球其他国家和地区的楼宇档案管理。敬请关注上线通知。</p>
+    <button onclick="document.getElementById('nonChinaPage').classList.add('hidden');document.getElementById('chinaPage').classList.remove('hidden');document.querySelectorAll('.geo-tab').forEach(b=>{b.classList.toggle('active',b.dataset.geo==='china')})" class="mt-6 rounded-xl bg-blue-500 hover:bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition">
+      ← 回到 China 主页
+    </button>
   </div>
 </div>
 
 <!-- ============================================================
-     CHINA PAGE (main content)
+     DIMENSION DRILL-DOWN MODAL
      ============================================================ -->
-<div id="chinaPage" class="pt-20">
-<div class="mx-auto max-w-[1440px] px-6 pb-10">
-
-  <!-- Breadcrumb + 3-layer nav -->
-  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-    <div id="breadcrumb" class="flex items-center gap-1.5 text-sm text-slate-500">
-      <span class="crumb" data-view="overview">中国区视角</span>
-      <span class="crumb-sep hidden">›</span>
-      <span class="crumb hidden font-medium text-slate-700" data-view="region">区域分析</span>
-      <span class="crumb-sep-2 hidden">›</span>
-      <span class="crumb-2 hidden font-medium text-slate-700" data-view="building">单楼宇</span>
-    </div>
-    <div class="drill-tab-nav">
-      <button class="ops-drill-tab tab-active" data-view="overview">1. 全国总览</button>
-      <button class="ops-drill-tab" data-view="region">2. 区域分析</button>
-      <button class="ops-drill-tab" data-view="building">3. 单楼宇档案</button>
-    </div>
-  </div>
-
-  <!-- Global Filters -->
-  <div id="globalFilters" class="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2.5 shadow-softer backdrop-blur">
-    <label class="text-sm text-slate-500">筛选</label>
-    <select id="filterRegion" class="rounded-lg border-slate-200 bg-white text-sm px-2 py-1">
-      <option value="">全部区域</option>
-      <option value="京区">京区</option><option value="北区">北区</option>
-      <option value="东区">东区</option><option value="西区">西区</option><option value="南区">南区</option>
-    </select>
-    <select id="filterAsset" class="rounded-lg border-slate-200 bg-white text-sm px-2 py-1">
-      <option value="">全部性质</option>
-      <option value="自持园区">自持园区</option><option value="租赁职场">租赁职场</option>
-    </select>
-    <select id="filterPeriod" class="rounded-lg border-slate-200 bg-white text-sm px-2 py-1">
-      <option value="H1_2026">H1 2026</option>
-      <option value="H2_2025">H2 2025</option>
-    </select>
-    <span class="text-xs text-slate-400" id="dataInfo"></span>
-  </div>
-
-  <!-- ============================================================
-       VIEW 1: 全国总览
-       ============================================================ -->
-  <div id="viewOverview" class="view-panel mt-5">
-
-    <!-- KPI Cards -->
-    <div id="kpiCards" class="grid grid-cols-5 gap-4"></div>
-
-    <!-- Key-4 Dimensions: 环境安全 / 温度适宜 / 照明亮堂 / 空气清新 -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <div class="flex items-center gap-2 mb-4">
-        <h3 class="text-sm font-semibold text-slate-700">四大核心维度</h3>
-        <span class="text-xs text-slate-400">环境安全 · 温度适宜 · 照明亮堂 · 空气清新</span>
-      </div>
-      <div id="key4KpiCards" class="grid grid-cols-4 gap-4 mb-5"></div>
-      <div id="chartKey4Region" style="height:320px"></div>
-    </div>
-
-    <!-- Trend Comparison: H1 2026 vs H2 2025 -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="text-sm font-semibold text-slate-700">H1 2026 vs H2 2025 维度趋势对比</h3>
-        <span class="text-xs text-slate-400" id="trendSummary"></span>
-      </div>
-      <div id="chartTrendCompare" style="height:480px"></div>
-    </div>
-
-    <!-- Dimension × Region Heatmap -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <h3 class="mb-3 text-sm font-semibold text-slate-700">维度 × 区域 达标热力图 <span class="text-xs text-slate-400 font-normal">点击单元格下钻</span></h3>
-      <div id="chartDimRegionHeatmap" style="height:480px"></div>
-    </div>
-
-    <!-- Charts row: 18-dimension bar + Self-owned vs Leased -->
-    <div class="mt-5 grid grid-cols-2 gap-5">
-      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-        <h3 class="mb-3 text-sm font-semibold text-slate-700">18 维度达标率</h3>
-        <div id="chartDimBar" style="height:420px"></div>
-      </div>
-      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-        <h3 class="mb-3 text-sm font-semibold text-slate-700">自持园区 vs 租赁职场 维度对比</h3>
-        <div id="chartAssetCompare" style="height:420px"></div>
-      </div>
-    </div>
-
-    <!-- Region Summary -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <h3 class="mb-3 text-sm font-semibold text-slate-700">区域概览</h3>
-      <div id="regionSummaryCards" class="grid grid-cols-5 gap-4"></div>
-    </div>
-
-    <!-- Measures Summary Table -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <h3 class="mb-3 text-sm font-semibold text-slate-700">改进措施汇总</h3>
-      <div id="measuresTableOverview" class="overflow-x-auto"></div>
-    </div>
-
-    <!-- Building List -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <h3 class="mb-3 text-sm font-semibold text-slate-700">楼宇列表</h3>
-      <div id="buildingTableOverview" class="overflow-x-auto"></div>
-    </div>
-  </div>
-
-  <!-- ============================================================
-       VIEW 2: 区域分析
-       ============================================================ -->
-  <div id="viewRegion" class="view-panel mt-5 hidden">
-
-    <!-- Region Tag Tabs -->
-    <div id="regionTabs" class="mb-4 flex flex-wrap gap-2"></div>
-
-    <!-- Regional KPI Cards -->
-    <div id="regionKpiCards" class="grid grid-cols-5 gap-4"></div>
-
-    <!-- Regional Dimension Chart -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <h3 class="mb-3 text-sm font-semibold text-slate-700" id="regionChartTitle">区域维度达标率</h3>
-      <div id="chartRegionDim" style="height:420px"></div>
-    </div>
-
-    <!-- Regional Asset Compare Chart -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <h3 class="mb-3 text-sm font-semibold text-slate-700">自持园区 vs 租赁职场 维度对比</h3>
-      <div id="chartRegionAssetCompare" style="height:420px"></div>
-    </div>
-
-    <!-- Regional Building Ranking -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <h3 class="mb-3 text-sm font-semibold text-slate-700">区域内楼宇排行</h3>
-      <div id="regionBuildingTable" class="overflow-x-auto"></div>
-    </div>
-
-    <!-- Regional Measures Summary -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <h3 class="mb-3 text-sm font-semibold text-slate-700">区域改进措施</h3>
-      <div id="regionMeasuresTable" class="overflow-x-auto"></div>
-    </div>
-  </div>
-
-  <!-- ============================================================
-       VIEW 3: 单楼宇档案
-       ============================================================ -->
-  <div id="viewBuilding" class="view-panel mt-5 hidden">
-
-    <!-- Building Selector + Back -->
-    <div class="mb-4 flex items-center gap-4">
-      <button id="btnBackFromBuilding" class="text-sm text-slate-500 hover:text-slate-700 transition">&larr; 返回</button>
-      <select id="buildingSelect" class="rounded-xl border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm min-w-[250px]"></select>
-      <span class="text-xs text-slate-400" id="buildingBreadcrumb"></span>
-    </div>
-
-    <!-- Building Info Card -->
-    <div id="buildingInfoCard" class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur"></div>
-
-    <!-- Radar Chart + AI Portrait -->
-    <div class="mt-5 grid grid-cols-3 gap-5">
-      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-        <h3 class="mb-3 text-sm font-semibold text-slate-700">智能画像分析</h3>
-        <div id="portraitContent">
-          <div class="flex flex-col items-center justify-center py-8 text-slate-400">
-            <p class="text-sm">请选择楼宇后查看</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-span-2 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-        <h3 class="mb-3 text-sm font-semibold text-slate-700">全维度雷达图 <span class="text-xs text-slate-400 font-normal">(H2 2025 vs H1 2026)</span></h3>
-        <div id="chartRadar" style="height:380px"></div>
-      </div>
-    </div>
-
-    <!-- Dimension Detail Tabs -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-3">
-          <h3 class="text-sm font-semibold text-slate-700">维度详情</h3>
-          <select id="indicatorPeriodSwitcher" class="rounded-lg border-slate-200 bg-white text-xs px-2 py-1 text-slate-600">
-            <option value="H1_2026">H1 2026</option>
-            <option value="H2_2025">H2 2025</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-2">
-          <span id="indicatorSaveStatus" class="text-xs text-slate-400 hidden"></span>
-          <button id="btnSaveIndicators" class="rounded-xl bg-indigo-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-indigo-600 transition">保存</button>
-        </div>
-      </div>
-      <div id="dimensionTabs" class="mb-4 flex flex-wrap gap-1.5"></div>
-      <div id="dimensionDetail" class="overflow-x-auto"></div>
-    </div>
-
-    <!-- Measures Tab Section -->
-    <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-      <h3 class="mb-3 text-sm font-semibold text-slate-700">改进方案</h3>
-      <div id="buildingMeasures" class="overflow-x-auto">
-        <p class="text-sm text-slate-400 py-4 text-center">暂无改进措施数据</p>
-      </div>
-    </div>
-
-    <!-- Asset / Energy / Cost Modules -->
-    <div class="mt-5 grid grid-cols-3 gap-5">
-      <div id="assetModule" class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-        <h3 class="mb-3 text-sm font-semibold text-slate-700">资产管理</h3>
-        <div id="assetModuleContent"></div>
-      </div>
-      <div id="energyModule" class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-        <h3 class="mb-3 text-sm font-semibold text-slate-700">能源管理</h3>
-        <div id="energyModuleContent"></div>
-      </div>
-      <div id="costModule" class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-softer backdrop-blur">
-        <h3 class="mb-3 text-sm font-semibold text-slate-700">费用分析</h3>
-        <div id="costModuleContent"></div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- Dimension Drill-down Modal -->
 <div id="dimDrillModal" class="fixed inset-0 z-[100] hidden items-center justify-center" style="background:rgba(15,23,42,0.3);backdrop-filter:blur(4px)">
-  <div class="bg-white rounded-3xl shadow-xl border border-slate-200/70 max-w-[700px] w-full max-h-[80vh] overflow-hidden flex flex-col">
+  <div class="bg-white rounded-3xl shadow-xl border border-slate-200 max-w-[700px] w-full max-h-[80vh] overflow-hidden flex flex-col">
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-      <h3 class="text-base font-semibold text-slate-700" id="drillModalTitle">维度详情</h3>
+      <h3 class="text-base font-semibold text-slate-800" id="drillModalTitle">维度详情</h3>
       <button id="btnCloseDrillModal" class="rounded-xl p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition text-lg leading-none">&times;</button>
     </div>
     <div class="p-5 overflow-y-auto flex-1" id="drillModalBody"></div>
   </div>
 </div>
 
+<!-- ============================================================
+     CMD+K SEARCH PALETTE
+     ============================================================ -->
+<div id="cmdPalette" class="fixed inset-0 z-[500] hidden items-start justify-center pt-[15vh]" style="background:rgba(15,23,42,0.3);backdrop-filter:blur(6px)" onclick="closeCmdPalette()">
+  <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden" onclick="event.stopPropagation()">
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+      <svg class="w-4 h-4 text-slate-400 flex-shrink-0" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input id="cmdPaletteInput" class="flex-1 border-none outline-none text-sm text-slate-700 placeholder-slate-300 bg-transparent" placeholder="搜索楼宇、维度、措施... (Esc 关闭)" autocomplete="off" />
+      <kbd class="text-[0.6rem] text-slate-300 bg-slate-50 px-1.5 py-0.5 rounded">ESC</kbd>
+    </div>
+    <div id="cmdPaletteResults" class="max-h-[360px] overflow-y-auto divide-y divide-slate-50"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     BUILDING COMPARE PANEL
+     ============================================================ -->
+<div id="comparePanel" class="fixed bottom-0 right-0 z-[80] bg-white border-t border-slate-200 shadow-2xl hidden" style="max-height:45vh;overflow-y:auto;left:var(--sidebar-w);transition:left .3s ease">
+  <div class="sticky top-0 bg-white border-b border-slate-100 px-5 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+      <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+      楼宇对比
+      <span id="compareNames" class="text-xs font-normal text-slate-400"></span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="refreshCompare()" class="text-xs text-blue-500 hover:text-blue-600">刷新</button>
+      <button onclick="closeCompare()" class="text-xs text-slate-400 hover:text-slate-600">关闭 ×</button>
+    </div>
+  </div>
+  <div id="compareContent" class="p-5"></div>
 </div>
 
 <script src="js/api.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/app.js"></script>
+<script>
+// Inline dimension page - no external dependencies
+// Toggle expand building list for indicator row
+window.toggleDimBldList = function(row, dimId, idx) {
+  var listDiv = document.getElementById('dimBldList' + idx);
+  var icon = document.getElementById('dimExpandIcon' + idx);
+  var detailRow = document.getElementById('dimBldRow' + idx);
+  if (!listDiv || !detailRow) return;
+  if (detailRow.style.display === 'none') {
+    // Expand
+    detailRow.style.display = 'table-row';
+    if (icon) icon.textContent = '▼';
+    var blds = window._dimBlds || [];
+    if (blds.length === 0) { listDiv.innerHTML = '<span class="text-slate-400">暂无楼宇数据</span>'; return; }
+    var tabMap = {D15:'safety', D16:'temperature', D17:'lighting', D18:'air'};
+    var tab = tabMap[dimId] || 'safety';
+    var html = '<div class="grid grid-cols-3 gap-1">';
+    for (var i = 0; i < Math.min(blds.length, 100); i++) {
+      var b = blds[i];
+      var cls = b.rate >= 90 ? 'badge-green' : b.rate >= 70 ? 'badge-amber' : 'badge-red';
+      html += '<div class="flex items-center gap-1 py-0.5"><span class="badge ' + cls + '" style="font-size:0.6rem">' + b.rate + '%</span><a onclick="event.stopPropagation();window.goToBldDimTab(' + b.id + ',\'' + tab + '\')" class="text-blue-500 hover:underline cursor-pointer truncate" style="font-size:0.65rem" title="' + b.name + '">' + b.name + '</a><span class="text-[0.55rem] text-slate-400">' + (b.region||'') + '</span></div>';
+    }
+    html += '</div>';
+    listDiv.innerHTML = html;
+  } else {
+    // Collapse
+    detailRow.style.display = 'none';
+    if (icon) icon.textContent = '▶';
+  }
+};
+
+// Navigate to a building and open a specific dimension tab
+window.goToBldDimTab = function(bldId, tab) {
+  navigateToBuilding(bldId);
+  setTimeout(function() {
+    var btn = document.querySelector('[data-bldtab="' + tab + '"]');
+    if (btn) btn.click();
+  }, 400);
+};
+
+window.openDimPage = function(dimId) {
+  var dimNames = { D15: '🛡️ 环境安全', D16: '🌡️ 温度适宜', D17: '💡 照明亮堂', D18: '🌬️ 空气清新' };
+  var name = dimNames[dimId] || dimId;
+  // Hide all views
+  ['viewOverview','viewRegion','viewBuilding','viewVendor'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.classList.add('hidden');
+  });
+  // Show dim view
+  var panel = document.getElementById('viewDimDetail');
+  if (!panel) { alert('viewDimDetail not found'); return; }
+  panel.classList.remove('hidden');
+  document.getElementById('dimPageTitle').textContent = name;
+  // Show loading
+  document.getElementById('dimKpiCards').innerHTML = '<div class="kpi-card"><div class="kpi-value">⏳</div><div class="kpi-label">加载 '+name+' 数据...</div></div>';
+  // Fetch
+  Promise.all([
+    fetchOverview({ period: 'H1_2026' }),
+    fetchOverview({ period: 'H2_2025' }),
+    apiGet('/api/dimensions/' + dimId + '/indicators?period=H1_2026'),
+    fetchMeasures({ dimension_id: dimId, limit: 100 })
+  ]).then(function(results) {
+    var data = results[0], h2Data = results[1], indicators = results[2], measures = results[3];
+    var bldRates = (data.building_dim_rates || []).filter(function(r) { return r.dim_id === dimId && r.rate != null; });
+    var total = bldRates.length;
+    var sum = 0; for (var i = 0; i < bldRates.length; i++) sum += bldRates[i].rate;
+    var avgRate = total > 0 ? Math.round(sum / total) : null;
+    // H2 delta
+    var h2Rates = (h2Data.building_dim_rates || []).filter(function(r) { return r.dim_id === dimId && r.rate != null; });
+    var h2Sum = 0; for (var i = 0; i < h2Rates.length; i++) h2Sum += h2Rates[i].rate;
+    var h2Avg = h2Rates.length > 0 ? Math.round(h2Sum / h2Rates.length) : null;
+    var delta = (avgRate != null && h2Avg != null) ? (avgRate - h2Avg) : null;
+    var deltaStr = delta == null ? '—' : (delta > 0 ? '↑ +' : delta < 0 ? '↓ ' : '→ ') + Math.abs(delta) + '%';
+    var deltaColor = delta == null ? '#94a3b8' : (delta > 0 ? '#059669' : delta < 0 ? '#dc2626' : '#64748b');
+    var passed = bldRates.filter(function(r) { return r.rate >= 100; }).length;
+    var failing = bldRates.filter(function(r) { return r.rate < 70; }).length;
+    var mCount = measures ? measures.length : 0;
+    var mBudget = 0;
+    if (measures) { for (var k = 0; k < measures.length; k++) { mBudget += (measures[k].budget || 0); } }
+    document.getElementById('dimKpiCards').innerHTML =
+      '<div class="kpi-card"><div class="kpi-value">' + (avgRate != null ? avgRate + '%' : '—') + '</div><div class="kpi-label">综合达标率</div><div class="kpi-sub">' + total + ' 栋</div></div>' +
+      '<div class="kpi-card"><div class="kpi-value" style="color:#059669">' + passed + '</div><div class="kpi-label">达标楼宇</div><div class="kpi-sub">' + (total > 0 ? Math.round(passed/total*100) : 0) + '% · 环比 <span style="color:' + deltaColor + '">' + deltaStr + '</span></div></div>' +
+      '<div class="kpi-card"><div class="kpi-value">' + mCount + '</div><div class="kpi-label">改进措施总数</div><div class="kpi-sub">关联 D15 维度</div></div>' +
+      '<div class="kpi-card"><div class="kpi-value">¥' + (mBudget/10000).toFixed(0) + '万</div><div class="kpi-label">总预算金额</div><div class="kpi-sub">' + mCount + ' 条措施</div></div>';
+    // Alert
+    var worst = null;
+    for (var i = 0; i < indicators.length; i++) {
+      if (indicators[i].completion_rate != null && (!worst || indicators[i].completion_rate < worst.completion_rate)) worst = indicators[i];
+    }
+    if (worst && worst.completion_rate < 80) {
+      document.getElementById('dimAlertBanner').innerHTML = '<div class="bld-alert-card ' + (worst.completion_rate < 50 ? 'bld-alert-danger' : 'bld-alert-warn') + '"><b>⚠️ ' + worst.name + '</b> 完成率 ' + worst.completion_rate + '%（目标 ' + (worst.target_value||'—') + '）</div>';
+    }
+    // Indicator table with expandable rows
+    var th = '<div class="frozen-pane" style="max-height:420px;overflow-y:auto"><table class="data-table"><thead><tr><th></th><th>指标</th><th>目标</th><th>全国均值</th><th>完成率</th><th>覆盖楼宇</th></tr></thead><tbody>';
+    var bldInfo = {}; (data.building_rates||[]).forEach(function(b){bldInfo[b.building_id]=b;});
+    for (var i = 0; i < indicators.length; i++) {
+      var ind = indicators[i], r = ind.completion_rate;
+      var cls = r != null ? (r >= 100 ? 'badge-green' : r >= 70 ? 'badge-amber' : 'badge-red') : 'badge-gray';
+      th += '<tr class="cursor-pointer hover:bg-slate-50" onclick="window.toggleDimBldList(this,\'' + dimId + '\',' + i + ')"><td><span class="text-xs text-slate-300" id="dimExpandIcon' + i + '">▶</span></td><td class="text-xs font-medium">' + ind.name + '</td><td class="text-xs">' + (ind.target_value||'—') + '</td><td class="text-xs">' + (ind.avg_actual != null ? parseFloat(ind.avg_actual).toFixed(1) : '—') + '</td><td><span class="badge ' + cls + '">' + (r != null ? r + '%' : '—') + '</span></td><td class="text-xs">' + (ind.bld_count||0) + ' 栋</td></tr>';
+      th += '<tr id="dimBldRow' + i + '" style="display:none"><td colspan="6" class="bg-slate-50 p-0"><div id="dimBldList' + i + '" class="text-xs" style="max-height:200px;overflow-y:auto;padding:8px 12px">加载中...</div></td></tr>';
+    }
+    th += '</tbody></table></div>';
+    document.getElementById('dimIndicatorTable').innerHTML = th;
+
+    // Store building data for expand
+    window._dimBlds = (data.building_rates||[]).map(function(b){
+      var rate = null;
+      for (var j = 0; j < bldRates.length; j++) {
+        if (bldRates[j].building_id === b.building_id) { rate = bldRates[j].rate; break; }
+      }
+      return {id:b.building_id, name:b.name, region:b.region, city:b.city, rate:rate};
+    }).filter(function(b){return b.rate != null;}).sort(function(a,b){return b.rate - a.rate;});
+    window._dimCurrentId = dimId;
+
+    // Measures
+    if (measures && measures.length) {
+      measures.sort(function(a,b){return ['超期','进行中','未开始','已完成'].indexOf(a.status)-['超期','进行中','未开始','已完成'].indexOf(b.status);});
+      var mh = '<div class="frozen-pane" style="max-height:400px;overflow-y:auto"><table class="data-table"><thead><tr><th>楼宇</th><th>措施</th><th>发起方</th><th>负责人</th><th>预算</th><th>计划完成</th><th>状态</th></tr></thead><tbody>';
+      for (var i = 0; i < Math.min(measures.length, 50); i++) {
+        var m = measures[i];
+        var deadline = '-';
+        if (m.planned_end_date) {
+          var diffDays = Math.ceil((new Date(m.planned_end_date) - new Date()) / 86400000);
+          deadline = diffDays < 0 ? '<span class="text-red-600 text-xs">超期' + Math.abs(diffDays) + '天</span>' : diffDays <= 7 ? '<span class="text-amber-600 text-xs">' + diffDays + '天</span>' : '<span class="text-xs">' + m.planned_end_date + '</span>';
+        }
+        mh += '<tr><td class="text-xs">' + (m.building_name||'-') + '</td>' +
+          '<td class="text-xs max-w-[180px] truncate" title="' + (m.description||m.name||'').replace(/"/g,'&quot;') + '">' + (m.name||'-') + '</td>' +
+          '<td><span class="badge ' + (m.initiator==='供应商'?'badge-amber':'badge-blue') + '">' + (m.initiator||'字节') + '</span></td>' +
+          '<td class="text-xs">' + (m.assignee||'-') + '</td>' +
+          '<td class="text-xs">' + (m.budget?'¥'+(m.budget/10000).toFixed(1)+'万':'-') + '</td>' +
+          '<td>' + deadline + '</td>' +
+          '<td><span class="badge ' + (m.status==='已完成'?'badge-green':m.status==='进行中'?'badge-blue':m.status==='超期'?'badge-red':'badge-gray') + '">'+m.status+'</span></td></tr>';
+      }
+      mh += '</tbody></table></div>';
+      document.getElementById('dimMeasures').innerHTML = mh;
+    }
+  }).catch(function(e) {
+    document.getElementById('dimKpiCards').innerHTML = '<div class="kpi-card"><div class="kpi-value" style="color:#dc2626">错误</div><div class="kpi-label">' + (e.message || '加载失败') + '</div></div>';
+  });
+};
+</script>
 </body>
 </html>

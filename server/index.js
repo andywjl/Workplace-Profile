@@ -9,12 +9,43 @@ const PORT = process.env.PORT || 3456;
 // Initialize database (schema + seed if empty)
 const db = getDb();
 initSchema(db);
+// Migration: add initiator column if not exists
+try { db.exec("ALTER TABLE measures ADD COLUMN initiator TEXT DEFAULT '字节'"); } catch(e) {}
+try { db.exec("ALTER TABLE measures ADD COLUMN assignee TEXT"); } catch(e) {}
+// Migration: users + user_scopes tables (create if not exists via initSchema handles new DBs)
+try { db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, display_name TEXT, role TEXT NOT NULL DEFAULT 'visitor', created_at TEXT DEFAULT (datetime('now','localtime')))"); } catch(e) {}
+try { db.exec("CREATE TABLE IF NOT EXISTS user_scopes (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id), scope_type TEXT NOT NULL, scope_value TEXT NOT NULL)"); } catch(e) {}
+// Seed demo users if empty
+const userCount = db.prepare('SELECT COUNT(*) as cnt FROM users').get();
+if (userCount.cnt === 0) {
+  const insertUser = db.prepare("INSERT INTO users (username, password, display_name, role) VALUES (?, ?, ?, ?)");
+  const insertScope = db.prepare("INSERT INTO user_scopes (user_id, scope_type, scope_value) VALUES (?, ?, ?)");
+  const users = [
+    ['admin', 'admin', '超级管理员', 'admin'],
+    ['leader', '123', '行政管理层', 'leadership'],
+    ['north', '123', '北区负责人', 'regional'],
+    ['dashizhong', '123', '大钟寺楼长', 'building'],
+    ['safety_poc', '123', '环境安全POC', 'poc'],
+    ['visitor', '123', '访客', 'visitor']
+  ];
+  const tx = db.transaction(() => {
+    for (const [uname, pwd, dname, role] of users) {
+      const r = insertUser.run(uname, pwd, dname, role);
+      if (role === 'regional') insertScope.run(r.lastInsertRowid, 'region', '北区');
+      if (role === 'building') insertScope.run(r.lastInsertRowid, 'building', '8');
+      if (role === 'poc') insertScope.run(r.lastInsertRowid, 'dimension', 'D15');
+    }
+  });
+  tx();
+  console.log('Demo users seeded: admin, leader, north, dashizhong, safety_poc, visitor');
+}
 const bldCount = db.prepare('SELECT COUNT(*) as cnt FROM buildings').get();
 if (bldCount.cnt === 0) {
   console.log('Seeding database...');
   require('../db/seed');
   require('../db/seed_demo_data');
   require('../db/seed_measures');
+  require('../db/seed_suppliers');
   console.log('Seed complete.');
 }
 
@@ -27,8 +58,12 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // ============================================================
 app.post('/api/login', (req, res) => {
   const { account, password } = req.body;
-  if (account === 'admin' && password === 'admin') {
-    res.json({ ok: true, account });
+  const db = getDb();
+  const user = db.prepare('SELECT * FROM users WHERE username = ? AND password = ?').get(account, password);
+  if (user) {
+    const token = 'tok_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const scopes = db.prepare('SELECT * FROM user_scopes WHERE user_id = ?').all(user.id);
+    res.json({ ok: true, token, user: { id: user.id, username: user.username, display_name: user.display_name, role: user.role, scopes } });
   } else {
     res.json({ ok: false, error: '账号或密码错误' });
   }
@@ -411,13 +446,14 @@ app.get('/api/overview', (req, res) => {
   const db = getDb();
   const period = req.query.period || 'H1_2026';
   const prevPeriod = req.query.prev_period || 'H2_2025';
-  const { region, asset_type } = req.query;
+  const { region, asset_type, supplier } = req.query;
 
   // Building filter
   let bWhere = 'WHERE 1=1';
   const bParams = [];
   if (region) { bWhere += ' AND region = ?'; bParams.push(region); }
   if (asset_type) { bWhere += ' AND asset_type = ?'; bParams.push(asset_type); }
+  if (supplier) { bWhere += ' AND supplier = ?'; bParams.push(supplier); }
 
   // Building counts
   const totalBuildings = db.prepare(`SELECT COUNT(*) as cnt FROM buildings ${bWhere}`).get(...bParams).cnt;
@@ -605,27 +641,32 @@ app.get('/api/regions/:region_id', (req, res) => {
   const period = req.query.period || 'H1_2026';
   const prevPeriod = req.query.prev_period || 'H2_2025';
   const regionId = req.params.region_id;
+  const { supplier } = req.query;
 
   // Forward to overview with region filter
-  const overview = db.prepare('SELECT COUNT(*) as cnt FROM buildings WHERE region = ?').get(regionId);
+  let bWhere = 'WHERE region = ?';
+  let bParams = [regionId];
+  if (supplier) { bWhere += ' AND supplier = ?'; bParams.push(supplier); }
+
+  const overview = db.prepare(`SELECT COUNT(*) as cnt FROM buildings ${bWhere}`).get(...bParams);
   if (overview.cnt === 0) return res.status(404).json({ error: 'Region not found' });
 
   // Reuse overview query pattern but scoped to region
   const allIndicators = db.prepare('SELECT * FROM indicators ORDER BY dimension_id, seq').all();
   const dimDefs = db.prepare('SELECT * FROM dimensions ORDER BY sort_order').all();
-  const buildings = db.prepare('SELECT * FROM buildings WHERE region = ? ORDER BY id').all(regionId);
+  const buildings = db.prepare(`SELECT * FROM buildings ${bWhere} ORDER BY id`).all(...bParams);
 
   const allValues = db.prepare(`
     SELECT iv.* FROM indicator_values iv
     JOIN buildings b ON iv.building_id = b.id
-    WHERE b.region = ? AND iv.period = ?
-  `).all(regionId, period);
+    ${bWhere.replace('WHERE', 'AND')} AND iv.period = ?
+  `).all(...bParams, period);
 
   const prevValues = db.prepare(`
     SELECT iv.* FROM indicator_values iv
     JOIN buildings b ON iv.building_id = b.id
-    WHERE b.region = ? AND iv.period = ?
-  `).all(regionId, prevPeriod);
+    ${bWhere.replace('WHERE', 'AND')} AND iv.period = ?
+  `).all(...bParams, prevPeriod);
 
   const valIdx = {};
   for (const v of allValues) valIdx[`${v.building_id}_${v.indicator_id}`] = v;
@@ -708,8 +749,8 @@ app.get('/api/regions/:region_id', (req, res) => {
   const measureStats = db.prepare(`
     SELECT m.status, COUNT(*) as cnt FROM measures m
     JOIN buildings b ON m.building_id = b.id
-    WHERE b.region = ? GROUP BY m.status
-  `).all(regionId);
+    ${bWhere.replace('WHERE', 'AND')} GROUP BY m.status
+  `).all(...bParams);
 
   res.json({
     region_id: regionId,
@@ -745,12 +786,12 @@ app.post('/api/measures', (req, res) => {
 
   const result = db.prepare(`
     INSERT INTO measures (building_id, name, status, dimension_ids, indicator_ids,
-      description, completion_phase, planned_end_date, budget, expected_effect)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      description, completion_phase, planned_end_date, budget, expected_effect, initiator, assignee)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     building_id, name, status || '未开始', dimension_ids || null, indicator_ids || null,
     description || null, completion_phase || null, planned_end_date || null,
-    budget || null, expected_effect || null
+    budget || null, expected_effect || null, req.body.initiator || '字节', req.body.assignee || null
   );
 
   const created = db.prepare('SELECT * FROM measures WHERE id = ?').get(result.lastInsertRowid);
@@ -802,6 +843,119 @@ app.get('/api/dimensions/stats', (req, res) => {
   });
 
   res.json(stats);
+});
+
+// ============================================================
+// GET /api/vendors - Vendor management overview
+// ============================================================
+app.get('/api/vendors', (req, res) => {
+  const db = getDb();
+  // Supplier list with stats
+  const suppliers = db.prepare(`
+    SELECT supplier, COUNT(*) as building_count,
+           SUM(CASE WHEN asset_type='自持园区' THEN 1 ELSE 0 END) as self_owned,
+           SUM(CASE WHEN asset_type='租赁职场' THEN 1 ELSE 0 END) as leased,
+           COUNT(DISTINCT region) as regions_covered
+    FROM buildings WHERE supplier IS NOT NULL AND supplier != ''
+    GROUP BY supplier ORDER BY building_count DESC
+  `).all();
+
+  // Overall rates per supplier
+  const rates = db.prepare(`
+    SELECT b.supplier, AVG(iv.actual_value) as avg_val, COUNT(*) as data_points
+    FROM indicator_values iv
+    JOIN buildings b ON iv.building_id = b.id
+    JOIN indicators i ON iv.indicator_id = i.id
+    WHERE b.supplier IS NOT NULL AND b.supplier != ''
+    AND iv.period = 'H1_2026' AND iv.actual_value IS NOT NULL
+    GROUP BY b.supplier
+  `).all();
+
+  // Measures per supplier
+  const measures = db.prepare(`
+    SELECT b.supplier, m.status, COUNT(*) as cnt, SUM(m.budget) as total_budget
+    FROM measures m JOIN buildings b ON m.building_id = b.id
+    WHERE b.supplier IS NOT NULL AND b.supplier != ''
+    GROUP BY b.supplier, m.status ORDER BY b.supplier
+  `).all();
+
+  // Building-indicator rates for heatmaps
+  const bldRates = db.prepare(`
+    SELECT b.supplier, b.id as building_id, b.name as building_name, b.region,
+           i.dimension_id, AVG(CASE WHEN iv.actual_value IS NOT NULL AND iv.actual_value > 0
+             AND i.target_value IS NOT NULL AND i.target_value != '—'
+             THEN CASE WHEN i.target_type = 'lower' THEN CAST(iv.actual_value AS REAL) / CAST(SUBSTR(i.target_value, 2) AS REAL)
+                       WHEN i.target_type = 'upper' THEN CAST(SUBSTR(i.target_value, 2) AS REAL) / CAST(iv.actual_value AS REAL)
+                       ELSE CAST(iv.actual_value AS REAL) / CAST(i.target_value AS REAL) END * 100
+             ELSE NULL END) as avg_rate
+    FROM buildings b
+    LEFT JOIN indicator_values iv ON b.id = iv.building_id AND iv.period = 'H1_2026'
+    LEFT JOIN indicators i ON iv.indicator_id = i.id
+    WHERE b.supplier IS NOT NULL AND b.supplier != ''
+    GROUP BY b.supplier, b.id, i.dimension_id
+  `).all();
+
+  res.json({ suppliers, rates, measures, bldRates });
+});
+
+// GET /api/vendors/:name - Single vendor detail
+app.get('/api/vendors/:name', (req, res) => {
+  const db = getDb();
+  const name = decodeURIComponent(req.params.name);
+
+  const supplier = db.prepare(`
+    SELECT supplier, COUNT(*) as building_count,
+           COUNT(DISTINCT region) as regions_covered,
+           SUM(CASE WHEN asset_type='自持园区' THEN 1 ELSE 0 END) as self_owned,
+           SUM(CASE WHEN asset_type='租赁职场' THEN 1 ELSE 0 END) as leased
+    FROM buildings WHERE supplier = ? GROUP BY supplier
+  `).get(name);
+  if (!supplier) return res.status(404).json({ error: 'Vendor not found' });
+
+  const buildings = db.prepare(`
+    SELECT id, name, region, city, asset_type, area_sqm, headcount
+    FROM buildings WHERE supplier = ? ORDER BY name
+  `).all(name);
+
+  const measures = db.prepare(`
+    SELECT m.*, b.name as building_name
+    FROM measures m JOIN buildings b ON m.building_id = b.id
+    WHERE b.supplier = ? ORDER BY m.status, m.created_at DESC
+  `).all(name);
+
+  res.json({ supplier, buildings, measures });
+});
+
+// GET /api/dimensions/:id/indicators - Sub-indicator details (national aggregated)
+app.get('/api/dimensions/:id/indicators', (req, res) => {
+  const db = getDb();
+  const dimId = req.params.id;
+  const period = req.query.period || 'H1_2026';
+
+  const indicators = db.prepare(`
+    SELECT i.*, AVG(iv.actual_value) as avg_actual,
+           COUNT(DISTINCT iv.building_id) as bld_count
+    FROM indicators i
+    LEFT JOIN indicator_values iv ON i.id = iv.indicator_id AND iv.period = ?
+    WHERE i.dimension_id = ?
+    GROUP BY i.id ORDER BY i.seq
+  `).all(period, dimId);
+
+  // Compute completion rate for each indicator
+  const result = indicators.map(ind => {
+    const avgActual = ind.avg_actual;
+    const target = parseTargetNum(ind.target_value);
+    let rate = null;
+    if (avgActual != null && target != null && target > 0) {
+      if (ind.target_type === 'lower') rate = Math.min(100, Math.round(target / avgActual * 100));
+      else if (ind.target_type === 'upper') rate = Math.min(100, Math.round(avgActual / target * 100));
+      else if (ind.target_type === 'fixed') rate = avgActual === target ? 100 : 0;
+      else rate = Math.min(100, Math.round(avgActual / target * 100));
+    }
+    return { ...ind, completion_rate: rate };
+  });
+
+  res.json(result);
 });
 
 app.listen(PORT, () => {

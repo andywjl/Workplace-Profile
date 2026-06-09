@@ -184,16 +184,27 @@ function renderRadarChart(domId, dimRatesH1, dimRatesH2) {
   const indicator = dims.map(d => ({ name: d.dimension_name, max: 100 }));
 
   chart.setOption({
+    animation: true,
+    animationDuration: 1200,
+    animationEasing: 'cubicOut',
+    animationDelay: function(idx) { return idx * 80; },
     tooltip: { ...tooltipStyle() },
     legend: { data: ['H1 2026', 'H2 2025'], bottom: 0, textStyle: { fontSize: 11 } },
     radar: {
       center: ['50%', '50%'],
       radius: '65%',
       indicator,
-      axisName: { fontSize: 10, color: '#64748b' }
+      axisName: { fontSize: 10, color: '#64748b' },
+      animation: true,
+      animationDuration: 1000,
+      animationEasing: 'backOut'
     },
     series: [{
       type: 'radar',
+      animation: true,
+      animationDuration: 1500,
+      animationEasing: 'elasticOut',
+      animationDelay: function(idx) { return idx * 120; },
       data: [
         {
           name: 'H1 2026',
@@ -282,11 +293,27 @@ function renderDimRegionHeatmap(domId, overviewData, onClick) {
   chart.setOption({
     tooltip: {
       ...tooltipStyle(),
+      backgroundColor: '#fff',
+      borderColor: '#e2e8f0',
+      padding: [14, 18],
+      extraCssText: 'border-radius:14px;box-shadow:0 12px 40px rgba(15,23,42,0.12);max-width:260px;',
       formatter: p => {
         const ri = p.value[0], di = p.value[1], v = p.value[2];
         const region = regions[ri];
         const dim = dims[di];
-        return `${region} · ${dim ? dim.name : ''}${dim ? ' (' + dim.dimension_id + ')' : ''}<br/>达标率: <b>${v >= 0 ? v + '%' : '无数据'}</b>${onClick ? '<br/><span style="color:#94a3b8;font-size:10px">点击下钻到区域</span>' : ''}`;
+        const key = `${ri}_${di}`;
+        const cnt = counts[key] || 0;
+        const totalInRegion = building_rates.filter(b => bldRegion[b.building_id] === region).length;
+        let grade = v >= 90 ? '🟢 优秀' : v >= 70 ? '🟡 良好' : v >= 50 ? '🟠 一般' : '🔴 需关注';
+        return `<div style="font-size:11px;color:#94a3b8;margin-bottom:4px">${region}</div>
+          <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:6px">${dim ? dim.name : ''} <span style="font-weight:400;font-size:11px;color:#94a3b8">${dim ? dim.dimension_id : ''}</span></div>
+          <div style="display:flex;gap:16px;align-items:center;margin-bottom:6px">
+            <span style="font-size:24px;font-weight:700;color:${v >= 90 ? '#059669' : v >= 70 ? '#d97706' : '#dc2626'}">${v >= 0 ? Math.round(v) + '%' : '--'}</span>
+            <span style="font-size:11px;color:#64748b">${grade}</span>
+          </div>
+          <div style="font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:6px">
+            覆盖 ${cnt} / ${totalInRegion} 栋楼宇${onClick ? '<br/>点击下钻到区域查看详情 →' : ''}
+          </div>`;
       }
     },
     grid: { left: 120, right: 80, top: 40, bottom: 30 },

@@ -4,29 +4,38 @@
 
 const API_BASE = '';
 
+// ---- Auth helpers ----
+function getToken() { return localStorage.getItem('auth_token') || ''; }
+function authHeaders(extra) {
+  extra = extra || {};
+  var t = getToken();
+  if (t) { extra['Authorization'] = 'Bearer ' + t; }
+  return extra;
+}
+
 async function apiGet(path) {
-  const res = await fetch(API_BASE + path);
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  var res = await fetch(API_BASE + path, { headers: authHeaders() });
+  if (!res.ok) throw new Error('API ' + path + ' failed: ' + res.status);
   return res.json();
 }
 
 async function apiPut(path, body) {
-  const res = await fetch(API_BASE + path, {
+  var res = await fetch(API_BASE + path, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  if (!res.ok) throw new Error('API ' + path + ' failed: ' + res.status);
   return res.json();
 }
 
 async function apiPost(path, body) {
-  const res = await fetch(API_BASE + path, {
+  var res = await fetch(API_BASE + path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  if (!res.ok) throw new Error('API ' + path + ' failed: ' + res.status);
   return res.json();
 }
 
@@ -54,14 +63,21 @@ async function fetchOverview(filters = {}) {
   const params = new URLSearchParams();
   if (filters.region) params.set('region', filters.region);
   if (filters.asset_type) params.set('asset_type', filters.asset_type);
+  if (filters.supplier) params.set('supplier', filters.supplier);
   if (filters.period) params.set('period', filters.period);
   if (filters.prev_period) params.set('prev_period', filters.prev_period);
   const qs = params.toString();
   return apiGet('/api/overview' + (qs ? '?' + qs : ''));
 }
 
-async function fetchRegion(regionId) {
-  return apiGet(`/api/regions/${encodeURIComponent(regionId)}`);
+async function fetchRegion(regionId, filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.asset_type) params.set('asset_type', filters.asset_type);
+  if (filters.supplier) params.set('supplier', filters.supplier);
+  if (filters.period) params.set('period', filters.period);
+  if (filters.prev_period) params.set('prev_period', filters.prev_period);
+  const qs = params.toString();
+  return apiGet('/api/regions/' + encodeURIComponent(regionId) + (qs ? '?' + qs : ''));
 }
 
 async function fetchBuildingIndicators(buildingId, period) {

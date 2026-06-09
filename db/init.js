@@ -83,6 +83,8 @@ function initSchema(db) {
       budget REAL,
       expected_effect TEXT,
       effect_validation TEXT,
+      initiator TEXT DEFAULT '字节',
+      assignee TEXT,
       created_at TEXT DEFAULT (datetime('now','localtime')),
       updated_at TEXT DEFAULT (datetime('now','localtime'))
     );
@@ -91,6 +93,22 @@ function initSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_iv_indicator ON indicator_values(indicator_id);
     CREATE INDEX IF NOT EXISTS idx_iv_period ON indicator_values(period);
     CREATE INDEX IF NOT EXISTS idx_measures_building ON measures(building_id);
+
+		CREATE TABLE IF NOT EXISTS users (
+	  id INTEGER PRIMARY KEY AUTOINCREMENT,
+	  username TEXT NOT NULL UNIQUE,
+	  password TEXT NOT NULL,
+	  display_name TEXT,
+	  role TEXT NOT NULL DEFAULT 'visitor',
+	  created_at TEXT DEFAULT (datetime('now','localtime'))
+	);
+
+		CREATE TABLE IF NOT EXISTS user_scopes (
+	  id INTEGER PRIMARY KEY AUTOINCREMENT,
+	  user_id INTEGER REFERENCES users(id),
+	  scope_type TEXT NOT NULL,
+	  scope_value TEXT NOT NULL
+	);
   `);
 }
 

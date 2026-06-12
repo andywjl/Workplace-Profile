@@ -153,9 +153,6 @@ window.logout = function() {
   if (enterBtn) enterBtn.classList.add('hidden');
   var loginModal = document.getElementById('loginModal');
   if (loginModal) loginModal.style.display = 'flex';
-  // Clear login fields
-  var la = document.getElementById('loginAccount');
-  if (la) la.value = '';
 };
 
 // Show login (called by API 401 handler)
@@ -234,7 +231,8 @@ async function init() {
     }
 
     updateHint('正在加载全国总览...');
-    await loadOverview();
+    // logout() hides all view panels, so go through switchView to restore visibility
+    await switchView('overview');
 
     // Fade out loading
     if (loadingScreen) {
@@ -300,7 +298,6 @@ async function init() {
   const btnShowLogin = document.getElementById('btnShowLogin');
   const btnCloseLogin = document.getElementById('btnCloseLogin');
   const btnLogin = document.getElementById('btnLogin');
-  const loginAccount = document.getElementById('loginAccount');
 
   if (btnShowLogin && loginModal) {
     btnShowLogin.addEventListener('click', () => {
@@ -319,14 +316,10 @@ async function init() {
     });
   }
 
+  // One-click demo login: always enter as the default admin account
   const doLogin = async () => {
-    const account = (loginAccount?.value || '').trim();
-    if (!account) {
-      if (loginAccount) { loginAccount.style.borderColor = '#b05050'; loginAccount.focus(); }
-      return;
-    }
     try {
-      const res = await apiPost('/api/login', { account });
+      const res = await apiPost('/api/login', { account: 'admin' });
       if (res.ok) {
         state.user = res.user;
         state.token = res.token;
@@ -342,17 +335,6 @@ async function init() {
   };
 
   if (btnLogin) btnLogin.addEventListener('click', doLogin);
-  if (loginAccount) {
-    loginAccount.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-    loginAccount.addEventListener('input', () => { loginAccount.style.borderColor = ''; });
-  }
-  // Demo account chips: click to fill and login
-  document.querySelectorAll('.demo-account-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (loginAccount) loginAccount.value = btn.dataset.account;
-      doLogin();
-    });
-  });
 
   // ---- Back to landing page ----
   const btnBack = document.getElementById('btnBackToLanding');
@@ -420,8 +402,8 @@ function switchView(view) {
   // Scroll to top of content
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  if (view === 'overview') loadOverview();
-  else if (view === 'region') loadRegionView();
+  if (view === 'overview') return loadOverview();
+  else if (view === 'region') return loadRegionView();
   if (view === 'building') {
     if (!state.selectedBuildingId) {
       return getBuildings().then(function(list) {

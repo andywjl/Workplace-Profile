@@ -104,17 +104,7 @@ window.toggleSidebarRegion = function(e) {
   switchView('region');
 };
 
-// Sidebar region sub-item click handlers
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    document.querySelectorAll('.sidebar-region-sub').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        drillToRegion(btn.dataset.region);
-      });
-    });
-  }, 100);
-});
+// Sidebar region sub-item clicks are bound via inline onclick in index.html
 
 // Counter animation: animate number from start to end
 function animateCounter(el, start, end, suffix, decimals) {
@@ -165,9 +155,7 @@ window.logout = function() {
   if (loginModal) loginModal.style.display = 'flex';
   // Clear login fields
   var la = document.getElementById('loginAccount');
-  var lp = document.getElementById('loginPassword');
   if (la) la.value = '';
-  if (lp) lp.value = '';
 };
 
 // Show login (called by API 401 handler)
@@ -313,7 +301,6 @@ async function init() {
   const btnCloseLogin = document.getElementById('btnCloseLogin');
   const btnLogin = document.getElementById('btnLogin');
   const loginAccount = document.getElementById('loginAccount');
-  const loginPassword = document.getElementById('loginPassword');
 
   if (btnShowLogin && loginModal) {
     btnShowLogin.addEventListener('click', () => {
@@ -334,17 +321,12 @@ async function init() {
 
   const doLogin = async () => {
     const account = (loginAccount?.value || '').trim();
-    const password = (loginPassword?.value || '').trim();
     if (!account) {
       if (loginAccount) { loginAccount.style.borderColor = '#b05050'; loginAccount.focus(); }
       return;
     }
-    if (!password) {
-      if (loginPassword) { loginPassword.style.borderColor = '#b05050'; loginPassword.focus(); }
-      return;
-    }
     try {
-      const res = await apiPost('/api/login', { account, password });
+      const res = await apiPost('/api/login', { account });
       if (res.ok) {
         state.user = res.user;
         state.token = res.token;
@@ -360,11 +342,17 @@ async function init() {
   };
 
   if (btnLogin) btnLogin.addEventListener('click', doLogin);
-  if (loginPassword) loginPassword.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   if (loginAccount) {
     loginAccount.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
     loginAccount.addEventListener('input', () => { loginAccount.style.borderColor = ''; });
   }
+  // Demo account chips: click to fill and login
+  document.querySelectorAll('.demo-account-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (loginAccount) loginAccount.value = btn.dataset.account;
+      doLogin();
+    });
+  });
 
   // ---- Back to landing page ----
   const btnBack = document.getElementById('btnBackToLanding');
@@ -436,13 +424,12 @@ function switchView(view) {
   else if (view === 'region') loadRegionView();
   if (view === 'building') {
     if (!state.selectedBuildingId) {
-      getBuildings().then(function(list) {
+      return getBuildings().then(function(list) {
         state.selectedBuildingId = (list && list.length) ? list[0].id : 1;
-        loadBuildingView(state.selectedBuildingId);
-      }).catch(function() { state.selectedBuildingId = 1; loadBuildingView(1); });
-      return;
+        return loadBuildingView(state.selectedBuildingId);
+      }).catch(function() { state.selectedBuildingId = 1; return loadBuildingView(1); });
     }
-    loadBuildingView(state.selectedBuildingId);
+    return loadBuildingView(state.selectedBuildingId);
   }
   if (view === 'vendor') loadVendorView();
 }
@@ -1066,11 +1053,28 @@ window.exportPDF = function() {
   if (!printWindow) return;
   const title = state.currentView === 'overview' ? '全国总览' : state.currentView === 'region' ? '区域分析' : '单楼宇档案';
   const content = document.querySelector('#chinaPage .flex-1') || document.querySelector('#viewOverview');
+  // Canvas pixels don't survive innerHTML copy, so swap each ECharts container for an image snapshot
+  let html = '';
+  if (content) {
+    const clone = content.cloneNode(true);
+    Object.keys(chartInstances).forEach(domId => {
+      const target = clone.querySelector('#' + domId);
+      if (!target) return;
+      try {
+        const img = document.createElement('img');
+        img.src = chartInstances[domId].getDataURL({ pixelRatio: 2, backgroundColor: '#fff' });
+        img.style.width = '100%';
+        target.innerHTML = '';
+        target.appendChild(img);
+      } catch (e) { /* chart disposed or not rendered yet */ }
+    });
+    html = clone.innerHTML;
+  }
   printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Workplace Profile - ${title}</title>
     <script src="https://cdn.tailwindcss.com"><\/script>
     <link rel="stylesheet" href="${window.location.origin}/css/style.css">
     <style>body{font-family:Inter,sans-serif;padding:30px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
-    </head><body>${content ? content.innerHTML : ''}</body></html>`);
+    </head><body>${html}</body></html>`);
   printWindow.document.close();
   setTimeout(() => printWindow.print(), 500);
 };
@@ -1889,7 +1893,7 @@ function renderRegionMeasuresTable(measures) {
 // ============================================================
 async function navigateToBuilding(buildingId) {
   state.selectedBuildingId = buildingId;
-  switchView('building');
+  return switchView('building');
 }
 
 async function loadBuildingView(buildingId) {

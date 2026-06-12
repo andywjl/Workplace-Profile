@@ -54,18 +54,18 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ============================================================
-// POST /api/login - Simple auth
+// POST /api/login - Demo auth: account only, no password check
 // ============================================================
 app.post('/api/login', (req, res) => {
-  const { account, password } = req.body;
+  const { account } = req.body;
   const db = getDb();
-  const user = db.prepare('SELECT * FROM users WHERE username = ? AND password = ?').get(account, password);
+  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(account);
   if (user) {
     const token = 'tok_' + Date.now() + '_' + Math.random().toString(36).slice(2);
     const scopes = db.prepare('SELECT * FROM user_scopes WHERE user_id = ?').all(user.id);
     res.json({ ok: true, token, user: { id: user.id, username: user.username, display_name: user.display_name, role: user.role, scopes } });
   } else {
-    res.json({ ok: false, error: '账号或密码错误' });
+    res.json({ ok: false, error: '账号不存在' });
   }
 });
 
@@ -947,8 +947,8 @@ app.get('/api/dimensions/:id/indicators', (req, res) => {
     const target = parseTargetNum(ind.target_value);
     let rate = null;
     if (avgActual != null && target != null && target > 0) {
-      if (ind.target_type === 'lower') rate = Math.min(100, Math.round(target / avgActual * 100));
-      else if (ind.target_type === 'upper') rate = Math.min(100, Math.round(avgActual / target * 100));
+      if (ind.target_type === 'lower') rate = Math.min(100, Math.round(avgActual / target * 100));
+      else if (ind.target_type === 'upper') rate = Math.min(100, Math.round(target / avgActual * 100));
       else if (ind.target_type === 'fixed') rate = avgActual === target ? 100 : 0;
       else rate = Math.min(100, Math.round(avgActual / target * 100));
     }

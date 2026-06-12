@@ -65,16 +65,19 @@
         <button id="btnCloseLogin" class="text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>
       </div>
       <div class="p-6">
-        <div class="mb-4">
+        <div class="mb-5">
           <label class="block text-xs font-medium mb-1.5 text-slate-500">账号</label>
           <input id="loginAccount" type="text" class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 placeholder-slate-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-50 transition" placeholder="请输入您的账号" autocomplete="off" />
         </div>
-        <div class="mb-5">
-          <label class="block text-xs font-medium mb-1.5 text-slate-500">密码</label>
-          <input id="loginPassword" type="password" class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 placeholder-slate-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-50 transition" placeholder="请输入密码" />
-        </div>
         <button id="btnLogin" class="w-full rounded-xl bg-blue-500 hover:bg-blue-600 py-2.5 text-sm font-semibold text-white transition active:scale-[0.98]">进入系统</button>
-        <p class="text-[0.65rem] text-center mt-3 text-slate-300">演示版本 · 请使用授权账号登录</p>
+        <p class="text-[0.65rem] text-center mt-3 text-slate-300">演示版本 · 输入账号即可登录，无需密码</p>
+        <div class="flex flex-wrap justify-center gap-1.5 mt-2">
+          <button class="demo-account-chip rounded-md bg-slate-50 hover:bg-blue-50 hover:text-blue-500 px-2 py-0.5 text-[0.65rem] text-slate-400 transition" data-account="admin">admin · 管理员</button>
+          <button class="demo-account-chip rounded-md bg-slate-50 hover:bg-blue-50 hover:text-blue-500 px-2 py-0.5 text-[0.65rem] text-slate-400 transition" data-account="leader">leader · 管理层</button>
+          <button class="demo-account-chip rounded-md bg-slate-50 hover:bg-blue-50 hover:text-blue-500 px-2 py-0.5 text-[0.65rem] text-slate-400 transition" data-account="north">north · 区域</button>
+          <button class="demo-account-chip rounded-md bg-slate-50 hover:bg-blue-50 hover:text-blue-500 px-2 py-0.5 text-[0.65rem] text-slate-400 transition" data-account="dashizhong">dashizhong · 楼长</button>
+          <button class="demo-account-chip rounded-md bg-slate-50 hover:bg-blue-50 hover:text-blue-500 px-2 py-0.5 text-[0.65rem] text-slate-400 transition" data-account="visitor">visitor · 访客</button>
+        </div>
       </div>
     </div>
   </div>
@@ -580,11 +583,10 @@ window.toggleDimBldList = function(row, dimId, idx) {
 
 // Navigate to a building and open a specific dimension tab
 window.goToBldDimTab = function(bldId, tab) {
-  navigateToBuilding(bldId);
-  setTimeout(function() {
+  Promise.resolve(navigateToBuilding(bldId)).then(function() {
     var btn = document.querySelector('[data-bldtab="' + tab + '"]');
     if (btn) btn.click();
-  }, 400);
+  });
 };
 
 window.openDimPage = function(dimId) {
@@ -628,7 +630,7 @@ window.openDimPage = function(dimId) {
     document.getElementById('dimKpiCards').innerHTML =
       '<div class="kpi-card"><div class="kpi-value">' + (avgRate != null ? avgRate + '%' : '—') + '</div><div class="kpi-label">综合达标率</div><div class="kpi-sub">' + total + ' 栋</div></div>' +
       '<div class="kpi-card"><div class="kpi-value" style="color:#059669">' + passed + '</div><div class="kpi-label">达标楼宇</div><div class="kpi-sub">' + (total > 0 ? Math.round(passed/total*100) : 0) + '% · 环比 <span style="color:' + deltaColor + '">' + deltaStr + '</span></div></div>' +
-      '<div class="kpi-card"><div class="kpi-value">' + mCount + '</div><div class="kpi-label">改进措施总数</div><div class="kpi-sub">关联 D15 维度</div></div>' +
+      '<div class="kpi-card"><div class="kpi-value">' + mCount + '</div><div class="kpi-label">改进措施总数</div><div class="kpi-sub">关联 ' + dimId + ' 维度</div></div>' +
       '<div class="kpi-card"><div class="kpi-value">¥' + (mBudget/10000).toFixed(0) + '万</div><div class="kpi-label">总预算金额</div><div class="kpi-sub">' + mCount + ' 条措施</div></div>';
     // Alert
     var worst = null;
@@ -644,7 +646,7 @@ window.openDimPage = function(dimId) {
     for (var i = 0; i < indicators.length; i++) {
       var ind = indicators[i], r = ind.completion_rate;
       var cls = r != null ? (r >= 100 ? 'badge-green' : r >= 70 ? 'badge-amber' : 'badge-red') : 'badge-gray';
-      th += '<tr class="cursor-pointer hover:bg-slate-50" onclick="window.toggleDimBldList(this,\'' + dimId + '\',' + i + ')"><td><span class="text-xs text-slate-300" id="dimExpandIcon' + i + '">▶</span></td><td class="text-xs font-medium">' + ind.name + '</td><td class="text-xs">' + (ind.target_value||'—') + '</td><td class="text-xs">' + (ind.avg_actual != null ? parseFloat(ind.avg_actual).toFixed(1) : '—') + '</td><td><span class="badge ' + cls + '">' + (r != null ? r + '%' : '—') + '</span></td><td class="text-xs">' + (ind.bld_count||0) + ' 栋</td></tr>';
+      th += '<tr class="cursor-pointer hover:bg-slate-50" onclick="window.toggleDimBldList(this,\'' + dimId + '\',' + i + ')"><td><span class="text-xs text-slate-300" id="dimExpandIcon' + i + '">▶</span></td><td class="text-xs font-medium">' + ind.name + '</td><td class="text-xs">' + (ind.target_value||'—') + '</td><td class="text-xs">' + (ind.avg_actual != null && isFinite(parseFloat(ind.avg_actual)) ? parseFloat(ind.avg_actual).toFixed(1) : '—') + '</td><td><span class="badge ' + cls + '">' + (r != null ? r + '%' : '—') + '</span></td><td class="text-xs">' + (ind.bld_count||0) + ' 栋</td></tr>';
       th += '<tr id="dimBldRow' + i + '" style="display:none"><td colspan="6" class="bg-slate-50 p-0"><div id="dimBldList' + i + '" class="text-xs" style="max-height:200px;overflow-y:auto;padding:8px 12px">加载中...</div></td></tr>';
     }
     th += '</tbody></table></div>';
@@ -662,7 +664,9 @@ window.openDimPage = function(dimId) {
 
     // Measures
     if (measures && measures.length) {
-      measures.sort(function(a,b){return ['超期','进行中','未开始','已完成'].indexOf(a.status)-['超期','进行中','未开始','已完成'].indexOf(b.status);});
+      var statusOrder = ['超期','进行中','未开始','已完成'];
+      var statusRank = function(s){ var i = statusOrder.indexOf(s); return i < 0 ? statusOrder.length : i; };
+      measures.sort(function(a,b){ return statusRank(a.status) - statusRank(b.status); });
       var mh = '<div class="frozen-pane" style="max-height:400px;overflow-y:auto"><table class="data-table"><thead><tr><th>楼宇</th><th>措施</th><th>发起方</th><th>负责人</th><th>预算</th><th>计划完成</th><th>状态</th></tr></thead><tbody>';
       for (var i = 0; i < Math.min(measures.length, 50); i++) {
         var m = measures[i];

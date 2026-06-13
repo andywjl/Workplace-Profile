@@ -2,6 +2,9 @@
 // Workplace Profile System - Main Application
 // ============================================================
 
+// 单楼宇档案默认展示的楼宇（成都桂溪广场）
+const DEFAULT_BUILDING_ID = 60;
+
 // ---- State ----
 const state = {
   currentView: 'overview',
@@ -406,10 +409,12 @@ function switchView(view) {
   else if (view === 'region') return loadRegionView();
   if (view === 'building') {
     if (!state.selectedBuildingId) {
+      // 默认展示成都桂溪广场（id=60），不存在时回退到列表首个
       return getBuildings().then(function(list) {
-        state.selectedBuildingId = (list && list.length) ? list[0].id : 1;
+        var def = (list || []).find(function(b) { return b.id === DEFAULT_BUILDING_ID; });
+        state.selectedBuildingId = def ? def.id : ((list && list.length) ? list[0].id : DEFAULT_BUILDING_ID);
         return loadBuildingView(state.selectedBuildingId);
-      }).catch(function() { state.selectedBuildingId = 1; return loadBuildingView(1); });
+      }).catch(function() { state.selectedBuildingId = DEFAULT_BUILDING_ID; return loadBuildingView(DEFAULT_BUILDING_ID); });
     }
     return loadBuildingView(state.selectedBuildingId);
   }

@@ -357,6 +357,9 @@
         <!-- Building Info Card (compact) -->
         <div id="buildingInfoCard" class="content-card"></div>
 
+        <!-- 需要关注情况 (demo modules) -->
+        <div id="bldAttentionCards" class="mt-4"></div>
+
         <!-- Radar Chart + Portrait (always visible) -->
         <div class="mt-4 grid grid-cols-2 gap-5">
           <div class="content-card">
@@ -371,6 +374,9 @@
           </div>
         </div>
 
+        <!-- AI 总结 (demo modules) -->
+        <div id="aiSummarySection" class="mt-4"></div>
+
         <!-- 10-Tab Navigation -->
         <div id="bldTabBar" class="mt-4 flex items-center border-b border-slate-200 overflow-x-auto">
           <button class="bld-tab active" data-bldtab="overview">📋 总览</button>
@@ -378,7 +384,11 @@
           <button class="bld-tab" data-bldtab="temperature">🌡️ 温度适宜</button>
           <button class="bld-tab" data-bldtab="lighting">💡 照明亮堂</button>
           <button class="bld-tab" data-bldtab="air">🌬️ 空气清新</button>
-          <button class="bld-tab" data-bldtab="energy">⚡ 能效与设备</button>
+          <button class="bld-tab" data-bldtab="tickets">🎫 工单</button>
+          <button class="bld-tab" data-bldtab="mail">📮 小邮局</button>
+          <button class="bld-tab" data-bldtab="consumables">📦 耗材</button>
+          <button class="bld-tab" data-bldtab="asset">🏷️ 资产管理</button>
+          <button class="bld-tab" data-bldtab="energy">⚡ 能耗管理</button>
           <button class="bld-tab" data-bldtab="service">🔧 服务效率</button>
           <button class="bld-tab" data-bldtab="space">🏢 空间与资产</button>
           <button class="bld-tab" data-bldtab="cost">💰 成本分析</button>
@@ -538,6 +548,14 @@
 
 <script src="js/api.js"></script>
 <script src="js/charts.js"></script>
+<script src="js/modules/shared.js"></script>
+<script src="js/modules/demo-data.js"></script>
+<script src="js/modules/tickets.js"></script>
+<script src="js/modules/mail.js"></script>
+<script src="js/modules/consumables.js"></script>
+<script src="js/modules/assets.js"></script>
+<script src="js/modules/energy.js"></script>
+<script src="js/modules/ai-summary.js"></script>
 <script src="js/app.js"></script>
 <script>
 // Inline dimension page - no external dependencies

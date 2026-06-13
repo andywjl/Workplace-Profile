@@ -1937,6 +1937,10 @@ async function reloadIndicatorsForCurrentPeriod() {
     // Set up tab bar and render default overview tab
     setupBldTabs();
     renderBldTab('overview');
+    // Demo modules: 需要关注情况 + AI 总结
+    if (window.BldModules && window.BldModules.onBuildingLoaded) {
+      try { BldModules.onBuildingLoaded(state.selectedBuildingId); } catch (e) { console.error('BldModules hook failed:', e); }
+    }
     // Pre-compute other tab data in background
     setTimeout(() => {
       renderAssetModule(state.selectedBuildingId);
@@ -2423,6 +2427,11 @@ function setupBldTabs() {
 function renderBldTab(tabKey) {
   const container = document.getElementById('bldTabContent');
   if (!container) return;
+  // Demo modules provide their own tabs (tickets/mail/consumables/asset/energy)
+  if (window.BldModules && window.BldModules.tabs[tabKey]) {
+    window.BldModules.tabs[tabKey](container, state.selectedBuildingId);
+    return;
+  }
   const data = state.buildingIndicatorsData;
   if (!data) return;
 
